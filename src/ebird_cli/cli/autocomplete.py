@@ -18,12 +18,5 @@ class ContextSensitiveCompleter(Completer):
         else:
             command_name = words[0]
             command = self.command_completers.get(command_name)
-            if command and len(words) >= 2:
-                completions = command.get_completions(words)
-                if command.single_param_command():
-                    command_arguments = " ".join(words[1:])
-                    for completion in completions:
-                        yield Completion(completion, start_position=-len(command_arguments))
-                else:
-                    for completion in completions:
-                        yield Completion(completion, start_position=-len(document.get_word_before_cursor()))
+            for completion in command.get_completions(document, complete_event):
+                yield completion

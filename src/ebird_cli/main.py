@@ -106,8 +106,8 @@ def main():
             continue
         except EOFError:
             break
-        # except Exception as e:
-        #     print(f"An error occurred: {e}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
