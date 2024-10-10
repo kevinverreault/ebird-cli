@@ -1,10 +1,11 @@
+import argparse
 import datetime
 import os
 from prompt_toolkit.shortcuts import input_dialog
 from .services.location import LocationService
 from .services.printing import PrintingService
 from .services.observation import ObservationService
-from .cli.command import Command
+from .cli.command import Command, RecentCommand, NotableCommand
 from .cli.autocomplete import ContextSensitiveCompleter
 from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
@@ -67,7 +68,7 @@ def main():
 
     location_service = LocationService("CA-QC-MR")
 
-    commands = {cls.command_name: cls(observation_service, printing_service, location_service) for cls in Command.__subclasses__()}
+    commands = {cls.command_name: cls(observation_service, printing_service, location_service) for cls in [RecentCommand, NotableCommand]}
 
     style = Style.from_dict({
         'prompt': 'ansigreen bold',
@@ -106,6 +107,8 @@ def main():
             continue
         except EOFError:
             break
+        except argparse.ArgumentError as e:
+            print(f"Invalid argument: {e.message}")
         except Exception as e:
             print(f"An error occurred: {e}")
 
