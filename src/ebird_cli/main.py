@@ -107,10 +107,10 @@ def main():
             continue
         except EOFError:
             break
-        # except argparse.ArgumentError as e:
-        #     print(f"Invalid argument: {e.message}")
-        # except Exception as e:
-        #     print(f"An error occurred: {e}")
+        except argparse.ArgumentError as e:
+            print(f"Invalid argument: {e.message}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":

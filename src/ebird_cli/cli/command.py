@@ -1,7 +1,7 @@
 from abc import ABC
 from colorama import Fore
 from .argument_parser import CliArgumentParser
-from ..domain.regional_levels import RegionalLevels
+from ..domain.regional_scopes import RegionalScopes
 from ..services.location import LocationService
 from ..services.observation import ObservationService
 from ..services.printing import PrintingService
@@ -73,7 +73,7 @@ class Command(Completer):
                         start_position = -len(document.get_word_before_cursor())
                     else:
                         text_before_cursor = document.text_before_cursor
-                        hyphen_index = text_before_cursor.rfind("-")
+                        hyphen_index = text_before_cursor.rfind(FLAG)
                         start_position = hyphen_index - len(text_before_cursor)
                     yield Completion(completion.text, start_position=start_position)
             else:
@@ -139,53 +139,6 @@ class Command(Completer):
         return f"{command_name:18} {mandatory_params} {optional_params}"
 
 
-# class ConfigureCommand(Command):
-#     command_name = "configure"
-#     mandatory_params = ["key", "value"]
-#     description = "Configure CLI parameters"
-#     parameters = ["location", "back"]
-#
-#     def handle_command(self, *args):
-#         if len(args) >= 2:
-#             key = args[0]
-#             if key == self.parameters[0]:
-#                 self.location_service.set_location(' '.join(map(str, args[1:])))
-#             elif key == self.parameters[1]:
-#                 if self.validate_days(args[1]):
-#                     self.observation_service.set_range_in_days(args[1])
-#         else:
-#             self.print_description()
-#             self.print_mandatory_param(self.mandatory_params[0], f"CLI parameters to configure: {self.parameters}")
-#             self.print_mandatory_param(self.mandatory_params[1], f"Value of CLI parameter")
-#
-#     def get_completions(self, words):
-#         if len(words) >= 3:
-#             key = words[1]
-#             value = words[2]
-#             if key == self.parameters[0]:
-#                 return self.location_service.search_subregions(value)
-#             elif key == self.parameters[1]:
-#                 return [str(x) for x in range(1, 31)]
-#             else:
-#                 return []
-#         elif len(words) == 2:
-#             return [x for x in ["location", "back"] if words[1] in x]
-#         else:
-#             return []
-#
-#     def single_param_command(self) -> bool:
-#         return False
-#
-#     def change_location(self, location_id):
-#         self.location_service.set_location(location_id)
-#
-#     def validate_days(self, days):
-#         if 0 < int(days) <= 31:
-#             return True
-#         else:
-#             print("Error: 'days' should be between 1 and 30.")
-#             return False
-
 class MultiWordArgumentCommand(Command, ABC):
     pass
 
@@ -223,7 +176,7 @@ class MultiWordArgumentCommand(Command, ABC):
 class RegionScopedCommand(MultiWordArgumentCommand, ABC):
     pass
 
-    level_arg = "level"
+    scope_arg = "scope"
     region_arg = "region"
     back_arg = "back"
     days_back = [str(num) for num in list(range(1, 31))]
@@ -236,50 +189,50 @@ class RegionScopedCommand(MultiWordArgumentCommand, ABC):
         if user_input.back:
             days_back = int(user_input.back)
 
-        self.handle_observations(user_input.region, user_input.level, days_back)
+        self.handle_observations(user_input.region, user_input.scope, days_back)
 
     def get_suggestions(self, user_input, start_position, flag):
         if flag == self.arg_name(self.region_arg):
-            for completion in self.get_region_suggestions(user_input.level, user_input.region):
+            for completion in self.get_region_suggestions(user_input.scope, user_input.region):
                 yield Completion(completion, start_position=start_position)
         else:
             for completion in [day for day in self.days_back if user_input.back in day]:
                 yield Completion(completion, start_position=start_position)
 
-    def get_region_suggestions(self, level, region) -> list:
-        if level == RegionalLevels.PROVINCIAL.value:
+    def get_region_suggestions(self, scope, region) -> list:
+        if scope == RegionalScopes.PROVINCIAL.value:
             return self.location_service.get_subnationals()
-        elif level == RegionalLevels.REGIONAL.value:
+        elif scope == RegionalScopes.REGIONAL.value:
             return self.location_service.get_regions() if region == "" else self.location_service.search_regions(region)
-        elif level == RegionalLevels.LOCATION.value:
+        elif scope == RegionalScopes.HOTSPOT.value:
             return self.location_service.get_hotspots() if region == "" else self.location_service.search_hotspots(region)
         else:
             return []
 
     def setup_params(self):
-        self.mandatory_params = [self.level_arg, self.arg_name(self.region_arg)]
+        self.mandatory_params = [self.scope_arg, self.arg_name(self.region_arg)]
         self.optional_params = [self.arg_name(self.back_arg)]
 
     def setup_parser(self):
-        self.parser.add_positional_argument(self.level_arg, type=str, choices=[level.value for level in RegionalLevels], help='Regional level')
+        self.parser.add_positional_argument(self.scope_arg, type=str, choices=[scope.value for scope in RegionalScopes], help='Regional scope')
         self.parser.add_flag_argument(self.arg_name(self.region_arg), type=str, required=True, help='Region code')
         self.parser.add_flag_argument(self.arg_name(self.back_arg), type=str, required=False, help="Days to search back")
 
     def arg_is_multi_word(self, arg_name):
         return arg_name == self.arg_name(self.region_arg)
 
-    def get_regions(self, region, level):
+    def get_regions(self, region, scope):
         regions = []
-        if level == RegionalLevels.PROVINCIAL.value:
+        if scope == RegionalScopes.PROVINCIAL.value:
             regions = self.location_service.get_subnational_id(region)
-        elif level == RegionalLevels.REGIONAL.value:
+        elif scope == RegionalScopes.REGIONAL.value:
             regions = self.location_service.get_region_id(region)
-        elif level == RegionalLevels.LOCATION.value:
+        elif scope == RegionalScopes.HOTSPOT.value:
             regions = self.location_service.get_hotspot_ids(region)
 
         return regions
 
-    def handle_observations(self, region, level, back):
+    def handle_observations(self, region, scope, back):
         raise NotImplementedError
 
 
@@ -287,8 +240,8 @@ class RecentCommand(RegionScopedCommand):
     command_name = "recent"
     description = "Retrieve recent observations for the specified region"
 
-    def handle_observations(self, region, level, back):
-        regions = self.get_regions(region, level)
+    def handle_observations(self, region, scope, back):
+        regions = self.get_regions(region, scope)
         logger.debug(f"regions to fetch: {regions}")
         self.printing_service.print_recent(self.observation_service.get_unique_recent_observations(regions, back))
 
@@ -297,7 +250,7 @@ class NotableCommand(RegionScopedCommand):
     command_name = "notable"
     description = "Retrieve notable observations for the specified region"
 
-    def handle_observations(self, region, level, back):
-        regions = self.get_regions(region, level)
+    def handle_observations(self, region, scope, back):
+        regions = self.get_regions(region, scope)
         logger.debug(f"regions to fetch: {regions}")
         self.printing_service.print_notable(self.observation_service.get_notable_observations(regions, back))
