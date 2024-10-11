@@ -7,14 +7,13 @@ class ObservationService:
 
     def __init__(self, api_key, locale):
         self.api_client = Client(api_key, locale)
-        self.back = self.DEFAULT_DAYS
 
     def configure_client(self, back, hotspot=True):
         self.api_client.back = back
         self.api_client.hotspot = hotspot
 
-    def get_notable_observations(self, location_id) -> list:
-        self.configure_client(self.back)
+    def get_notable_observations(self, location_id, back=DEFAULT_DAYS) -> list:
+        self.configure_client(back)
 
         results = self.api_client.get_notable_observations(location_id)
 
@@ -30,8 +29,8 @@ class ObservationService:
 
         return sorted(notable_observations, key=lambda x: x.observation_datetime)
 
-    def get_unique_recent_observations(self, locations: [], descending=False) -> list:
-        self.configure_client(self.back)
+    def get_unique_recent_observations(self, locations: [], back=DEFAULT_DAYS, descending=False) -> list:
+        self.configure_client(back)
 
         observations = list()
         for loc in locations:
@@ -46,5 +45,5 @@ class ObservationService:
         return sorted(unique.values(), key=lambda x: x.observation_datetime, reverse=descending)
 
     def set_range_in_days(self, days):
-        self.back = days
+        return days
 

@@ -58,16 +58,17 @@ class Command(Completer):
     def get_completions(self, document: Document, complete_event):
         try:
             text = document.text_before_cursor
-            # words = self.preprocess_input(text.split(" ")[1:])
             words = text.split(" ")[1:]
             logger.debug(f"generic autocomplete: {words}")
             word_count = len(words)
+            flag_count = len([s for s in words if s.startswith(FLAG)])
             last_flag = self.find_last_flag(words)
             if word_count <= len([param for param in self.mandatory_params if not param.startswith(FLAG)]):
                 for completion in self.positional_completer.get_completions(document, complete_event):
                     yield Completion(completion.text, start_position=-len(document.get_word_before_cursor()))
             elif (words[-1] == "" and not words[-2].startswith(FLAG) and not self.arg_is_multi_word(last_flag)) or words[-1].startswith(FLAG):
-                for completion in self.flagged_completer.get_completions(document, complete_event):
+                for completion in [completion for completion in self.flagged_completer.get_completions(document, complete_event) if
+                                   completion.text not in words and (completion.text in self.mandatory_params or flag_count >= len(self.mandatory_params))]:
                     if words[-1] == "":
                         start_position = -len(document.get_word_before_cursor())
                     else:
@@ -213,33 +214,39 @@ class MultiWordArgumentCommand(Command, ABC):
         else:
             start_position = -len(document.get_word_before_cursor())
 
-        for completion in self.get_suggestions(user_input):
-            yield Completion(completion, start_position=start_position)
+        yield from self.get_suggestions(user_input, start_position, words[last_flag_index])
 
-    def get_suggestions(self, user_input):
+    def get_suggestions(self, user_input, start_position, flag):
         raise NotImplementedError
 
 
-class RegionLevelCommand(MultiWordArgumentCommand, ABC):
+class RegionScopedCommand(MultiWordArgumentCommand, ABC):
     pass
 
     level_arg = "level"
     region_arg = "region"
     back_arg = "back"
+    days_back = [str(num) for num in list(range(1, 31))]
 
     def handle_command(self, *args):
         processed_input = self.preprocess_input(' '.join(args).split())
         logger.debug(f"user input: {processed_input}")
         user_input = self.parse_input(processed_input)
+        days_back = 7
+        if user_input.back:
+            days_back = int(user_input.back)
 
-        if user_input.level and user_input.region:
-            self.handle_observations(user_input.region, user_input.level)
+        self.handle_observations(user_input.region, user_input.level, days_back)
+
+    def get_suggestions(self, user_input, start_position, flag):
+        if flag == self.arg_name(self.region_arg):
+            for completion in self.get_region_suggestions(user_input.level, user_input.region):
+                yield Completion(completion, start_position=start_position)
         else:
-            print(f"{self.mandatory_params} are required.")
+            for completion in [day for day in self.days_back if user_input.back in day]:
+                yield Completion(completion, start_position=start_position)
 
-    def get_suggestions(self, user_input):
-        level = user_input.level
-        region = user_input.region
+    def get_region_suggestions(self, level, region) -> list:
         if level == RegionalLevels.PROVINCIAL.value:
             return self.location_service.get_subnationals()
         elif level == RegionalLevels.REGIONAL.value:
@@ -251,10 +258,12 @@ class RegionLevelCommand(MultiWordArgumentCommand, ABC):
 
     def setup_params(self):
         self.mandatory_params = [self.level_arg, self.arg_name(self.region_arg)]
+        self.optional_params = [self.arg_name(self.back_arg)]
 
     def setup_parser(self):
-        self.parser.add_positional_argument('level', type=str, choices=[level.value for level in RegionalLevels], help='Regional level')
-        self.parser.add_flag_argument('-region', type=str, required=True, help='Region code')
+        self.parser.add_positional_argument(self.level_arg, type=str, choices=[level.value for level in RegionalLevels], help='Regional level')
+        self.parser.add_flag_argument(self.arg_name(self.region_arg), type=str, required=True, help='Region code')
+        self.parser.add_flag_argument(self.arg_name(self.back_arg), type=str, required=False, help="Days to search back")
 
     def arg_is_multi_word(self, arg_name):
         return arg_name == self.arg_name(self.region_arg)
@@ -270,25 +279,25 @@ class RegionLevelCommand(MultiWordArgumentCommand, ABC):
 
         return regions
 
-    def handle_observations(self, region, level):
+    def handle_observations(self, region, level, back):
         raise NotImplementedError
 
 
-class RecentCommand(RegionLevelCommand):
+class RecentCommand(RegionScopedCommand):
     command_name = "recent"
     description = "Retrieve recent observations for the specified region"
 
-    def handle_observations(self, region, level):
+    def handle_observations(self, region, level, back):
         regions = self.get_regions(region, level)
         logger.debug(f"regions to fetch: {regions}")
-        self.printing_service.print_recent(self.observation_service.get_unique_recent_observations(regions))
+        self.printing_service.print_recent(self.observation_service.get_unique_recent_observations(regions, back))
 
 
-class NotableCommand(RegionLevelCommand):
+class NotableCommand(RegionScopedCommand):
     command_name = "notable"
     description = "Retrieve notable observations for the specified region"
 
-    def handle_observations(self, region, level):
+    def handle_observations(self, region, level, back):
         regions = self.get_regions(region, level)
         logger.debug(f"regions to fetch: {regions}")
-        self.printing_service.print_notable(self.observation_service.get_notable_observations(regions))
+        self.printing_service.print_notable(self.observation_service.get_notable_observations(regions, back))
