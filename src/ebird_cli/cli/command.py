@@ -1,4 +1,6 @@
 from abc import ABC
+from typing import Generator
+
 from colorama import Fore
 from .argument_parser import CliArgumentParser
 from ..domain.regional_scopes import RegionalScopes
@@ -19,7 +21,7 @@ class Command(Completer):
     optional_params = []
     description = None
     positional_completer: WordCompleter = None
-    flagged_completer: WordCompleter = None
+    flag_completer: WordCompleter = None
 
     def __init__(self, observation_service: ObservationService, printing_service: PrintingService, location_service: LocationService):
         self.setup_params()
@@ -33,7 +35,7 @@ class Command(Completer):
     def handle_command(self, *args):
         raise NotImplementedError
 
-    def get_custom_completions(self, words, document: Document):
+    def get_flag_value_completions(self, words, document: Document):
         raise NotImplementedError
 
     def setup_params(self):
@@ -53,13 +55,13 @@ class Command(Completer):
 
     def setup_completer(self):
         self.positional_completer = WordCompleter(self.parser.positional_args, ignore_case=True)
-        self.flagged_completer = WordCompleter(self.parser.flag_args, ignore_case=True, match_middle=True)
+        self.flag_completer = WordCompleter(self.parser.flag_args, ignore_case=True, match_middle=True)
 
     def get_completions(self, document: Document, complete_event):
         try:
             text = document.text_before_cursor
             words = text.split(" ")[1:]
-            logger.debug(f"generic autocomplete: {words}")
+            logger.debug(f"command autocomplete: {words}")
             word_count = len(words)
             flag_count = len([s for s in words if s.startswith(FLAG)])
             last_flag = self.find_last_flag(words)
@@ -67,19 +69,22 @@ class Command(Completer):
                 for completion in self.positional_completer.get_completions(document, complete_event):
                     yield Completion(completion.text, start_position=-len(document.get_word_before_cursor()))
             elif (words[-1] == "" and not words[-2].startswith(FLAG) and not self.arg_is_multi_word(last_flag)) or words[-1].startswith(FLAG):
-                for completion in [completion for completion in self.flagged_completer.get_completions(document, complete_event) if
-                                   completion.text not in words and (completion.text in self.mandatory_params or flag_count >= len(self.mandatory_params))]:
-                    if words[-1] == "":
-                        start_position = -len(document.get_word_before_cursor())
-                    else:
-                        text_before_cursor = document.text_before_cursor
-                        hyphen_index = text_before_cursor.rfind(FLAG)
-                        start_position = hyphen_index - len(text_before_cursor)
-                    yield Completion(completion.text, start_position=start_position)
+                yield from self.get_flag_arg_completions(document, complete_event, words, flag_count)
             else:
-                yield from self.get_custom_completions(words, document)
+                yield from self.get_flag_value_completions(words, document)
         except argparse.ArgumentError as e:
             raise e.with_traceback(None)
+
+    def get_flag_arg_completions(self, document, complete_event, words, flag_count) -> Generator:
+        for completion in [completion for completion in self.flag_completer.get_completions(document, complete_event) if
+                           completion.text not in words and (completion.text in self.mandatory_params or flag_count >= len(self.mandatory_params))]:
+            if words[-1] == "":
+                start_position = -len(document.get_word_before_cursor())
+            else:
+                text_before_cursor = document.text_before_cursor
+                hyphen_index = text_before_cursor.rfind(FLAG)
+                start_position = hyphen_index - len(text_before_cursor)
+            yield Completion(completion.text, start_position=start_position)
 
     def preprocess_input(self, user_input):
         words = []
@@ -116,7 +121,7 @@ class Command(Completer):
     def parse_input(self, args):
         return self.parser.parse_args(args)
 
-    def arg_name(self, arg) -> str:
+    def flag_arg_name(self, arg) -> str:
         return f"{FLAG}{arg}"
 
     def print_mandatory_param(self, param_name, param_values):
@@ -142,8 +147,8 @@ class Command(Completer):
 class MultiWordArgumentCommand(Command, ABC):
     pass
 
-    def get_custom_completions(self, words, document: Document):
-        logger.debug(f"custom autocomplete: {self.preprocess_input(words)}")
+    def get_flag_value_completions(self, words, document: Document) -> Generator:
+        logger.debug(f"flag value autocomplete: {self.preprocess_input(words)}")
         user_input = self.parse_input(self.preprocess_input(words))
 
         text_before_cursor = document.text_before_cursor
@@ -167,9 +172,9 @@ class MultiWordArgumentCommand(Command, ABC):
         else:
             start_position = -len(document.get_word_before_cursor())
 
-        yield from self.get_suggestions(user_input, start_position, words[last_flag_index])
+        yield from self.get_flag_values(user_input, start_position, words[last_flag_index])
 
-    def get_suggestions(self, user_input, start_position, flag):
+    def get_flag_values(self, user_input, start_position, flag) -> Generator:
         raise NotImplementedError
 
 
@@ -191,15 +196,15 @@ class RegionScopedCommand(MultiWordArgumentCommand, ABC):
 
         self.handle_observations(user_input.region, user_input.scope, days_back)
 
-    def get_suggestions(self, user_input, start_position, flag):
-        if flag == self.arg_name(self.region_arg):
-            for completion in self.get_region_suggestions(user_input.scope, user_input.region):
+    def get_flag_values(self, user_input, start_position, flag) -> Generator:
+        if flag == self.flag_arg_name(self.region_arg):
+            for completion in self.get_region_completions(user_input.scope, user_input.region):
                 yield Completion(completion, start_position=start_position)
         else:
             for completion in [day for day in self.days_back if user_input.back in day]:
                 yield Completion(completion, start_position=start_position)
 
-    def get_region_suggestions(self, scope, region) -> list:
+    def get_region_completions(self, scope, region) -> list:
         if scope == RegionalScopes.PROVINCIAL.value:
             return self.location_service.get_subnationals()
         elif scope == RegionalScopes.REGIONAL.value:
@@ -210,16 +215,16 @@ class RegionScopedCommand(MultiWordArgumentCommand, ABC):
             return []
 
     def setup_params(self):
-        self.mandatory_params = [self.scope_arg, self.arg_name(self.region_arg)]
-        self.optional_params = [self.arg_name(self.back_arg)]
+        self.mandatory_params = [self.scope_arg, self.flag_arg_name(self.region_arg)]
+        self.optional_params = [self.flag_arg_name(self.back_arg)]
 
     def setup_parser(self):
         self.parser.add_positional_argument(self.scope_arg, type=str, choices=[scope.value for scope in RegionalScopes], help='Regional scope')
-        self.parser.add_flag_argument(self.arg_name(self.region_arg), type=str, required=True, help='Region code')
-        self.parser.add_flag_argument(self.arg_name(self.back_arg), type=str, required=False, help="Days to search back")
+        self.parser.add_flag_argument(self.flag_arg_name(self.region_arg), type=str, required=True, help='Region code')
+        self.parser.add_flag_argument(self.flag_arg_name(self.back_arg), type=str, required=False, help="Days to search back")
 
     def arg_is_multi_word(self, arg_name):
-        return arg_name == self.arg_name(self.region_arg)
+        return arg_name == self.flag_arg_name(self.region_arg)
 
     def get_regions(self, region, scope):
         regions = []
