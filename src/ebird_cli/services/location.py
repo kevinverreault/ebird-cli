@@ -2,6 +2,7 @@ import json
 import os
 from .dataframe import DataFrameService
 from ..domain.fields import EbirdFields
+from ..domain.regional_scopes import RegionalScopes
 
 FAVORITES_FILE = "~/ebird_data/favorites.json"
 
@@ -27,7 +28,6 @@ class LocationService(DataFrameService):
             subregions_json = json.load(file)
         self.regions = {entry['name']: entry['code'] for entry in subregions_json}
 
-        self.current_location = next((key for key, value in self.regions.items() if value == default_region), None)
         self.subnationals = {"Québec": default_region[:5]}
 
     def get_subnationals(self) -> list:
@@ -45,9 +45,6 @@ class LocationService(DataFrameService):
     def get_region_id(self, region_name: str) -> list:
         return [value for key, value in self.regions.items() if region_name == key]
 
-    def set_location(self, current_location):
-        self.current_location = current_location
-
     def get_hotspots(self) -> list:
         return [value[EbirdFields.location_name] for value in self.hotspots.values() if EbirdFields.location_name in value] + self.get_favorites()
 
@@ -55,7 +52,6 @@ class LocationService(DataFrameService):
         return any(
             EbirdFields.location_name in value and
             (hotspot_name == value[EbirdFields.location_name] or hotspot_name in self.favorites)
-            # and self.subregions[self.current_location] in value[EbirdFields.sub_subnational_code]
             for key, value in self.hotspots.items()
         )
 
@@ -66,7 +62,6 @@ class LocationService(DataFrameService):
     def search_hotspots(self, hotspot_name: str) -> list:
         return [value[EbirdFields.location_name] for key, value in self.hotspots.items() if
                 EbirdFields.location_name in value and hotspot_name.lower() in value[EbirdFields.location_name].lower()] + self.search_favorites(hotspot_name)
-        # and self.subregions[self.current_location] in value[EbirdFields.sub_subnational_code]]
 
     def get_favorites(self) -> list:
         return [*self.favorites] if self.favorites else []
@@ -76,3 +71,14 @@ class LocationService(DataFrameService):
             return []
 
         return [key for key, value in self.favorites.items() if favorite_name.lower() in key.lower()]
+
+    def get_region_ids_by_scope(self, region_name: str, scope: RegionalScopes) -> list:
+        regions = []
+        if scope == RegionalScopes.PROVINCIAL.value:
+            regions = self.get_subnational_id(region_name)
+        elif scope == RegionalScopes.REGIONAL.value:
+            regions = self.get_region_id(region_name)
+        elif scope == RegionalScopes.HOTSPOT.value:
+            regions = self.get_hotspot_ids(region_name)
+
+        return regions

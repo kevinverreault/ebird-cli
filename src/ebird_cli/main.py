@@ -11,6 +11,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
+from .utils.logger import logger
 from colorama import Fore
 
 api_key_env_variable = "EBIRDAPIKEY"
@@ -68,7 +69,8 @@ def main():
 
     location_service = LocationService("CA-QC-MR")
 
-    commands = {cls.command_name: cls(observation_service, printing_service, location_service) for cls in [RecentCommand, NotableCommand]}
+    commands = {command.command_name: command for command in
+                [cls(observation_service, location_service, printing_service) for cls in [RecentCommand, NotableCommand]]}
 
     style = Style.from_dict({
         'prompt': 'ansigreen bold',

@@ -1,8 +1,9 @@
-from abc import ABC
-from typing import Generator
+from typing import Generator, List, Dict
 
 from colorama import Fore
 from .argument_parser import CliArgumentParser
+from .command_argument import CommandArgument, RegionScopeArgument, BackArgument, ArgumentNames
+from .input_processing import preprocess_input, FLAG, flag_arg_name
 from ..domain.regional_scopes import RegionalScopes
 from ..services.location import LocationService
 from ..services.observation import ObservationService
@@ -12,40 +13,46 @@ import argparse
 from prompt_toolkit.completion import Completer, Completion, WordCompleter
 from prompt_toolkit.document import Document
 
-FLAG: str = "-"
-
 
 class Command(Completer):
-    command_name = None
-    mandatory_params = []
-    optional_params = []
-    description = None
-    positional_completer: WordCompleter = None
-    flag_completer: WordCompleter = None
-
-    def __init__(self, observation_service: ObservationService, printing_service: PrintingService, location_service: LocationService):
-        self.setup_params()
+    def __init__(self, observation_service, location_service, printing_service):
+        self.command_name = None
+        self.description = None
         self.observation_service = observation_service
-        self.printing_service = printing_service
         self.location_service = location_service
-        self.parser: CliArgumentParser = CliArgumentParser(description=self.description)
-        self.setup_parser()
-        self.setup_completer()
+        self.printing_service = printing_service
+        self.parser = CliArgumentParser()
+        self.flag_completer = None
+        self.positional_completer = None
+        self.arguments: List[CommandArgument] = []
+        self.mandatory_params = []
+        self.optional_params = []
 
-    def handle_command(self, *args):
+        self.setup_arguments()
+
+    def process_command(self, **kwargs):
         raise NotImplementedError
 
-    def get_flag_value_completions(self, words, document: Document):
-        raise NotImplementedError
-
-    def setup_params(self):
-        raise NotImplementedError
-
-    def setup_parser(self):
+    def register_arguments(self):
         raise NotImplementedError
 
     def arg_is_multi_word(self, arg_name):
-        raise NotImplementedError
+        for argument in self.arguments:
+            if argument.arg_is_multi_word(arg_name):
+                return True
+        return False
+
+    def handle_command(self, *args):
+        processed_input = preprocess_input(' '.join(args).split())
+        logger.debug(f"user input: {processed_input}")
+        user_input = self.parser.parse_args(processed_input)
+
+        kwargs: Dict[str, any] = dict()
+
+        for argument in self.arguments:
+            kwargs.update(argument.get_keywords(user_input))
+
+        self.process_command(**kwargs)
 
     def find_last_flag(self, words):
         for word in reversed(words):
@@ -53,29 +60,36 @@ class Command(Completer):
                 return word
         return None
 
-    def setup_completer(self):
+    def setup_arguments(self):
+        self.register_arguments()
+
+        for argument in self.arguments:
+            self.mandatory_params.extend(argument.get_mandatory_arguments())
+            self.optional_params.extend(argument.get_optional_arguments())
+            argument.setup_parser(self.parser)
+
         self.positional_completer = WordCompleter(self.parser.positional_args, ignore_case=True)
         self.flag_completer = WordCompleter(self.parser.flag_args, ignore_case=True, match_middle=True)
 
     def get_completions(self, document: Document, complete_event):
+        text = document.text_before_cursor
+        words = text.split(" ")[1:]
+        logger.debug(f"command get_completions: {words}")
+
         try:
-            text = document.text_before_cursor
-            words = text.split(" ")[1:]
-            logger.debug(f"command autocomplete: {words}")
-            word_count = len(words)
-            flag_count = len([s for s in words if s.startswith(FLAG)])
-            last_flag = self.find_last_flag(words)
-            if word_count <= len([param for param in self.mandatory_params if not param.startswith(FLAG)]):
+            if len(words) <= len([param for param in self.mandatory_params if not param.startswith(FLAG)]):
                 for completion in self.positional_completer.get_completions(document, complete_event):
                     yield Completion(completion.text, start_position=-len(document.get_word_before_cursor()))
-            elif (words[-1] == "" and not words[-2].startswith(FLAG) and not self.arg_is_multi_word(last_flag)) or words[-1].startswith(FLAG):
-                yield from self.get_flag_arg_completions(document, complete_event, words, flag_count)
+            elif (words[-1] == "" and not words[-2].startswith(FLAG) and not self.arg_is_multi_word(self.find_last_flag(words))) or words[-1].startswith(FLAG):
+                yield from self.get_flag_arg_completions(document, complete_event, words)
             else:
                 yield from self.get_flag_value_completions(words, document)
         except argparse.ArgumentError as e:
             raise e.with_traceback(None)
 
-    def get_flag_arg_completions(self, document, complete_event, words, flag_count) -> Generator:
+    def get_flag_arg_completions(self, document, complete_event, words) -> Generator:
+        flag_count = len([s for s in words if s.startswith(FLAG)])
+
         for completion in [completion for completion in self.flag_completer.get_completions(document, complete_event) if
                            completion.text not in words and (completion.text in self.mandatory_params or flag_count >= len(self.mandatory_params))]:
             if words[-1] == "":
@@ -86,70 +100,8 @@ class Command(Completer):
                 start_position = hyphen_index - len(text_before_cursor)
             yield Completion(completion.text, start_position=start_position)
 
-    def preprocess_input(self, user_input):
-        words = []
-        temp_word = []
-        flag = None
-        positional_done = False
-
-        for word in user_input:
-            if word.startswith('-') and len(word) > 1:
-                if temp_word:
-                    if flag:
-                        words.append(flag)
-                        words.append(" ".join(temp_word))
-                    else:
-                        words.extend(temp_word)
-                    temp_word = []
-                flag = word
-                positional_done = True
-            else:
-                if positional_done:
-                    temp_word.append(word)
-                else:
-                    words.append(word)
-
-        if temp_word:
-            if flag:
-                words.append(flag)
-                words.append(" ".join(temp_word))
-            else:
-                words.extend(temp_word)
-
-        return words
-
-    def parse_input(self, args):
-        return self.parser.parse_args(args)
-
-    def flag_arg_name(self, arg) -> str:
-        return f"{FLAG}{arg}"
-
-    def print_mandatory_param(self, param_name, param_values):
-        print(f"{Fore.MAGENTA}{param_name}{Fore.RESET}: {param_values}")
-
-    def print_optional_param(self, param_name, param_values):
-        print(f"{Fore.CYAN}{param_name}{Fore.RESET}: {param_values}")
-
-    def print_description(self):
-        print(f"{self.command_example()}")
-        print()
-        print(self.description)
-        print()
-
-    def command_example(self):
-        command_name = f"{Fore.RED}{self.command_name}{Fore.RESET}"
-        mandatory_params = f"{Fore.MAGENTA}<{', '.join(self.mandatory_params)}>{Fore.RESET}" if len(self.mandatory_params) else ""
-        optional_params = f"{Fore.CYAN}[{', '.join(self.optional_params)}]{Fore.RESET}" if len(self.optional_params) > 0 else ""
-
-        return f"{command_name:18} {mandatory_params} {optional_params}"
-
-
-class MultiWordArgumentCommand(Command, ABC):
-    pass
-
     def get_flag_value_completions(self, words, document: Document) -> Generator:
-        logger.debug(f"flag value autocomplete: {self.preprocess_input(words)}")
-        user_input = self.parse_input(self.preprocess_input(words))
+        user_input = self.parser.parse_args(preprocess_input(words))
 
         text_before_cursor = document.text_before_cursor
         words = text_before_cursor.strip().split()
@@ -172,90 +124,71 @@ class MultiWordArgumentCommand(Command, ABC):
         else:
             start_position = -len(document.get_word_before_cursor())
 
-        yield from self.get_flag_values(user_input, start_position, words[last_flag_index])
+        for argument in self.arguments:
+            if argument.supports_flag_argument_completion(words[last_flag_index]):
+                yield from argument.get_flag_values(user_input, start_position)
 
-    def get_flag_values(self, user_input, start_position, flag) -> Generator:
-        raise NotImplementedError
+    def print_mandatory_param(self, param_name, param_values):
+        print(f"{Fore.MAGENTA}{param_name}{Fore.RESET}: {param_values}")
+
+    def print_optional_param(self, param_name, param_values):
+        print(f"{Fore.CYAN}{param_name}{Fore.RESET}: {param_values}")
+
+    def print_description(self):
+        print(f"{self.command_example()}")
+        print()
+        print(self.description)
+        print()
+
+    def command_example(self):
+        command_name = f"{Fore.RED}{self.command_name}{Fore.RESET}"
+        mandatory_params = f"{Fore.MAGENTA}<{', '.join(self.mandatory_params)}>{Fore.RESET}" if len(self.mandatory_params) else ""
+        optional_params = f"{Fore.CYAN}[{', '.join(self.optional_params)}]{Fore.RESET}" if len(self.optional_params) > 0 else ""
+
+        return f"{command_name:18} {mandatory_params} {optional_params}"
 
 
-class RegionScopedCommand(MultiWordArgumentCommand, ABC):
+class ObservationCommand(Command):
     pass
 
-    scope_arg = "scope"
-    region_arg = "region"
-    back_arg = "back"
-    days_back = [str(num) for num in list(range(1, 31))]
+    scope_arg = str(ArgumentNames.SCOPE.value)
+    region_arg = str(ArgumentNames.REGION.value)
+    back_arg = str(ArgumentNames.BACK.value)
 
-    def handle_command(self, *args):
-        processed_input = self.preprocess_input(' '.join(args).split())
-        logger.debug(f"user input: {processed_input}")
-        user_input = self.parse_input(processed_input)
-        days_back = 7
-        if user_input.back:
-            days_back = int(user_input.back)
+    def process_command(self, **kwargs):
+        logger.debug(f"process_command - kwargs: {kwargs}")
 
-        self.handle_observations(user_input.region, user_input.scope, days_back)
+        region = kwargs[self.region_arg]
+        scope = kwargs[self.scope_arg]
+        days_back = kwargs[self.back_arg]
 
-    def get_flag_values(self, user_input, start_position, flag) -> Generator:
-        if flag == self.flag_arg_name(self.region_arg):
-            for completion in self.get_region_completions(user_input.scope, user_input.region):
-                yield Completion(completion, start_position=start_position)
-        else:
-            for completion in [day for day in self.days_back if user_input.back in day]:
-                yield Completion(completion, start_position=start_position)
+        self.handle_observations(self.location_service.get_region_ids_by_scope(region, scope), days_back)
 
-    def get_region_completions(self, scope, region) -> list:
-        if scope == RegionalScopes.PROVINCIAL.value:
-            return self.location_service.get_subnationals()
-        elif scope == RegionalScopes.REGIONAL.value:
-            return self.location_service.get_regions() if region == "" else self.location_service.search_regions(region)
-        elif scope == RegionalScopes.HOTSPOT.value:
-            return self.location_service.get_hotspots() if region == "" else self.location_service.search_hotspots(region)
-        else:
-            return []
+    def register_arguments(self):
+        self.arguments = [RegionScopeArgument(self.location_service),
+                          BackArgument()]
 
-    def setup_params(self):
-        self.mandatory_params = [self.scope_arg, self.flag_arg_name(self.region_arg)]
-        self.optional_params = [self.flag_arg_name(self.back_arg)]
-
-    def setup_parser(self):
-        self.parser.add_positional_argument(self.scope_arg, type=str, choices=[scope.value for scope in RegionalScopes], help='Regional scope')
-        self.parser.add_flag_argument(self.flag_arg_name(self.region_arg), type=str, required=True, help='Region code')
-        self.parser.add_flag_argument(self.flag_arg_name(self.back_arg), type=str, required=False, help="Days to search back")
-
-    def arg_is_multi_word(self, arg_name):
-        return arg_name == self.flag_arg_name(self.region_arg)
-
-    def get_regions(self, region, scope):
-        regions = []
-        if scope == RegionalScopes.PROVINCIAL.value:
-            regions = self.location_service.get_subnational_id(region)
-        elif scope == RegionalScopes.REGIONAL.value:
-            regions = self.location_service.get_region_id(region)
-        elif scope == RegionalScopes.HOTSPOT.value:
-            regions = self.location_service.get_hotspot_ids(region)
-
-        return regions
-
-    def handle_observations(self, region, scope, back):
+    def handle_observations(self, regions, back):
         raise NotImplementedError
 
 
-class RecentCommand(RegionScopedCommand):
-    command_name = "recent"
-    description = "Retrieve recent observations for the specified region"
+class RecentCommand(ObservationCommand):
+    def __init__(self, observation_service: ObservationService, location_service: LocationService, printing_service: PrintingService):
+        super().__init__(observation_service, location_service, printing_service)
 
-    def handle_observations(self, region, scope, back):
-        regions = self.get_regions(region, scope)
-        logger.debug(f"regions to fetch: {regions}")
+        self.command_name = "recent"
+        self.description = "Retrieve recent observations for the specified region"
+
+    def handle_observations(self, regions, back):
         self.printing_service.print_recent(self.observation_service.get_unique_recent_observations(regions, back))
 
 
-class NotableCommand(RegionScopedCommand):
-    command_name = "notable"
-    description = "Retrieve notable observations for the specified region"
+class NotableCommand(ObservationCommand):
+    def __init__(self, observation_service: ObservationService, location_service: LocationService, printing_service: PrintingService):
+        super().__init__(observation_service, location_service, printing_service)
 
-    def handle_observations(self, region, scope, back):
-        regions = self.get_regions(region, scope)
-        logger.debug(f"regions to fetch: {regions}")
+        self.command_name = "notable"
+        self.description = "Retrieve notable observations for the specified region"
+
+    def handle_observations(self, regions, back):
         self.printing_service.print_notable(self.observation_service.get_notable_observations(regions, back))

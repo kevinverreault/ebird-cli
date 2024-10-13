@@ -2,8 +2,8 @@ import argparse
 
 
 class CliArgumentParser:
-    def __init__(self, description: str):
-        self.parser = argparse.ArgumentParser(description=description, exit_on_error=False)
+    def __init__(self):
+        self.parser = argparse.ArgumentParser(exit_on_error=False)
         self.positional_args = []
         self.flag_args = []
 
