@@ -1,15 +1,17 @@
+import argparse
 import datetime
 import os
 from prompt_toolkit.shortcuts import input_dialog
 from .services.location import LocationService
 from .services.printing import PrintingService
 from .services.observation import ObservationService
-from .cli.command import Command
+from .cli.command import Command, RecentCommand, NotableCommand
 from .cli.autocomplete import ContextSensitiveCompleter
 from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
+from .utils.logger import logger
 from colorama import Fore
 
 api_key_env_variable = "EBIRDAPIKEY"
@@ -67,7 +69,8 @@ def main():
 
     location_service = LocationService("CA-QC-MR")
 
-    commands = {cls.command_name: cls(observation_service, printing_service, location_service) for cls in Command.__subclasses__()}
+    commands = {command.command_name: command for command in
+                [cls(observation_service, location_service, printing_service) for cls in [RecentCommand, NotableCommand]]}
 
     style = Style.from_dict({
         'prompt': 'ansigreen bold',
@@ -106,8 +109,10 @@ def main():
             continue
         except EOFError:
             break
-        # except Exception as e:
-        #     print(f"An error occurred: {e}")
+        except argparse.ArgumentError as e:
+            print(f"Invalid argument: {e.message}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":
