@@ -51,23 +51,58 @@ def setup_key_bindings():
     return bindings
 
 
-def main():
-    key_input = ""
-    if os.getenv(api_key_env_variable) is None:
-        print(f"{api_key_env_variable} not set.")
-        key_input = input_dialog(
-            title='eBird API key',
-            text='Please type your eBird API key:').run()
+def setup_parser(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "--api-key",
+        default=os.getenv(api_key_env_variable),
+        required=os.getenv(api_key_env_variable) is None,
+        help=f"eBird API key (mandatory if {api_key_env_variable} env variable is not set)",
+    )
 
-    api_key = os.getenv(api_key_env_variable) or key_input
-    locale = os.getenv(locale_env_variable) or "en"
+    parser.add_argument(
+        "--region",
+        default="CA-QC",
+        help="eBird subnational region code",
+    )
+
+    parser.add_argument(
+        "--locale",
+        type=str,
+        default=os.getenv(locale_env_variable) if os.getenv(locale_env_variable) is not None else "fr",
+        help="Locale",
+    )
+
+    parser.add_argument(
+        "--year-list",
+        type=str,
+        default=os.getenv(year_list_env_variable),
+        help="List of observations for the current year",
+    )
+
+    parser.add_argument(
+        "--life-list",
+        type=str,
+        default=os.getenv(life_list_env_variable),
+        help="List of lifetime observations",
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(description="eBird CLI")
+    setup_parser(parser)
+
+    args = parser.parse_args()
+
+    api_key = args.api_key
+    region = args.region
+    locale = args.locale
     observation_service = ObservationService(api_key, locale)
 
-    life_list = os.getenv(life_list_env_variable) or '~/ebird_data/life_list.csv'  # None
-    year_list = os.getenv(year_list_env_variable) or f"~/ebird_data/ebird_CA-QC_year_{datetime.datetime.now().year}_list.csv"  # None
+    life_list = args.life_list or None
+    year_list = args.year_list or None
     printing_service = PrintingService(life_list, year_list)
 
-    location_service = LocationService("CA-QC-MR")
+    location_service = LocationService(region)
 
     commands = {command.command_name: command for command in
                 [cls(observation_service, location_service, printing_service) for cls in [RecentCommand, NotableCommand]]}

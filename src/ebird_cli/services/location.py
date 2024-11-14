@@ -28,7 +28,7 @@ class LocationService(DataFrameService):
             subregions_json = json.load(file)
         self.regions = {entry['name']: entry['code'] for entry in subregions_json}
 
-        self.subnationals = {"Québec": default_region[:5]}
+        self.subnationals = {"Québec": default_region}
 
     def get_subnationals(self) -> list:
         return [key for key, value in self.subnationals.items()]

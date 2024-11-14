@@ -87,7 +87,7 @@ class RegionScopeArgument(CommandArgument):
 
 class BackArgument(CommandArgument):
     back_arg = str(ArgumentNames.BACK.value)
-    days_back = [str(num) for num in list(range(1, 31))]
+    days_back = [str(num) for num in list(range(1, 30))]
 
     def get_flag_values(self, user_input, start_position) -> Generator:
         for completion in [day for day in self.days_back if user_input.back in day]:
