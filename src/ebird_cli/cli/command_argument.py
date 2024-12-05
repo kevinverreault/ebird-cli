@@ -57,7 +57,7 @@ class RegionScopeArgument(CommandArgument):
 
     def setup_parser(self, parser: CliArgumentParser):
         parser.add_positional_argument(self.scope_arg, type=str, choices=[scope.value for scope in RegionalScopes], help='Regional scope')
-        parser.add_flag_argument(flag_arg_name(self.region_arg), type=str, required=True, help='Region code')
+        parser.add_flag_argument(flag_arg_name(self.region_arg), type=str, required=False, help='Region code')
 
     def get_mandatory_arguments(self):
         return [self.scope_arg, flag_arg_name(self.region_arg)]

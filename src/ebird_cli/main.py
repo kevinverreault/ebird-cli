@@ -1,23 +1,22 @@
 import argparse
-import datetime
 import os
-from prompt_toolkit.shortcuts import input_dialog
 from .services.location import LocationService
 from .services.printing import PrintingService
 from .services.observation import ObservationService
-from .cli.command import Command, RecentCommand, NotableCommand
+from .cli.command import RecentCommand, NotableCommand
 from .cli.autocomplete import ContextSensitiveCompleter
 from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
-from .utils.logger import logger
 from colorama import Fore
 
 api_key_env_variable = "EBIRDAPIKEY"
 locale_env_variable = "EBIRDLOCALE"
 year_list_env_variable = "EBIRDYEARLIST"
 life_list_env_variable = "EBIRDLIFELIST"
+lat_env_variable = "EBIRDLAT"
+long_env_variable = "EBIRDLONG"
 
 
 def print_menu(commands):
@@ -73,6 +72,20 @@ def setup_parser(parser: argparse.ArgumentParser):
     )
 
     parser.add_argument(
+        "--lat",
+        type=str,
+        default=os.getenv(lat_env_variable),
+        help="Latitude",
+    )
+
+    parser.add_argument(
+        "--long",
+        type=str,
+        default=os.getenv(long_env_variable),
+        help="Longitude",
+    )
+
+    parser.add_argument(
         "--year-list",
         type=str,
         default=os.getenv(year_list_env_variable),
@@ -96,7 +109,10 @@ def main():
     api_key = args.api_key
     region = args.region
     locale = args.locale
-    observation_service = ObservationService(api_key, locale)
+    lat = args.lat
+    long = args.long
+
+    observation_service = ObservationService(api_key, locale, lat, long)
 
     life_list = args.life_list or None
     year_list = args.year_list or None

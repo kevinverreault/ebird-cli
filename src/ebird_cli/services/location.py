@@ -29,6 +29,7 @@ class LocationService(DataFrameService):
         self.regions = {entry['name']: entry['code'] for entry in subregions_json}
 
         self.subnationals = {"Québec": default_region}
+        self.default_region = default_region
 
     def get_subnationals(self) -> list:
         return [key for key, value in self.subnationals.items()]
@@ -72,13 +73,16 @@ class LocationService(DataFrameService):
 
         return [key for key, value in self.favorites.items() if favorite_name.lower() in key.lower()]
 
-    def get_region_ids_by_scope(self, region_name: str, scope: RegionalScopes) -> list:
+    def get_region_ids_by_scope(self, region_name: str | None, scope: RegionalScopes) -> list:
         regions = []
-        if scope == RegionalScopes.PROVINCIAL.value:
-            regions = self.get_subnational_id(region_name)
-        elif scope == RegionalScopes.REGIONAL.value:
-            regions = self.get_region_id(region_name)
-        elif scope == RegionalScopes.HOTSPOT.value:
-            regions = self.get_hotspot_ids(region_name)
+        if region_name is not None:
+            if scope == RegionalScopes.PROVINCIAL.value:
+                regions = self.get_subnational_id(region_name)
+            elif scope == RegionalScopes.REGIONAL.value:
+                regions = self.get_region_id(region_name)
+            elif scope == RegionalScopes.HOTSPOT.value:
+                regions = self.get_hotspot_ids(region_name)
+        else:
+            regions.append(self.default_region)
 
         return regions

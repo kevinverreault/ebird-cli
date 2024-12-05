@@ -1,35 +1,38 @@
-from colorama import Fore
-
 from .dataframe import DataFrameService
 from ..domain.fields import ExportFields
+from rich.console import Console, Text
+from rich.table import Table
 
 
 class PrintingService(DataFrameService):
     def __init__(self, life_list: str or None, year_list: str or None):
         self.life_list = self.get_dataframe(life_list) if life_list else None
         self.year_list = self.get_dataframe(year_list) if year_list else None
-
-    def is_csv(self, filename) -> bool:
-        return filename[-3:] == "csv"
+        self.console = Console()
 
     def print_notable(self, notable_observations: list):
-        print()
-        for obs in notable_observations:
-            a = f"{obs.name[0:32]:32}"
-            obs_text = f"{a} ({obs.observation_date:10}) | {obs.location[0:45]:45} | {obs.subname:28}"
-            print(self.get_text_color(obs) + obs_text + Fore.RESET)
-        print()
-        print(f"Total: {len(notable_observations)}")
+        self.print_observations(notable_observations, lambda obs: obs.location)
 
     def print_recent(self, recent_observations: list):
-        print()
-        for observation in recent_observations:
-            obs_text = f"{observation.name:28} ({observation.observation_date:10}) | {observation.location:48}"
-            print(self.get_text_color(observation) + obs_text + Fore.RESET)
-        print()
-        print(f"Total: {len(recent_observations)}")
+        self.print_observations(recent_observations, lambda obs: obs.location)
 
-    def get_text_color(self, observation):
+    def print_observations(self, observations, location):
+        table = Table()
+
+        table.add_column('Date', style='magenta')
+        table.add_column('Observation')
+        table.add_column('Location')
+        table.add_column('Region')
+
+        for observation in observations:
+            table.add_row(observation.observation_date, self.get_observation_text(observation), location(observation), observation.subname)
+
+        print()
+        self.console.print(table)
+        print()
+        print(f"Total: {len(observations)}")
+
+    def get_observation_text(self, observation):
         is_year_target = False
         is_life_target = False
         if self.year_list is not None:
@@ -38,10 +41,11 @@ class PrintingService(DataFrameService):
             is_life_target = not (self.life_list[ExportFields.common_name] == observation.name).any()
 
         if is_life_target:
-            text_color = Fore.RED
+            style = 'red'
         elif is_year_target:
-            text_color = Fore.GREEN
+            style = 'green'
         else:
-            text_color = Fore.WHITE
+            style = 'white'
 
-        return text_color
+        return Text(observation.name, style)
+
