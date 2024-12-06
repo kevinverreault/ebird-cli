@@ -75,7 +75,7 @@ class RegionScopeArgument(CommandArgument):
         return arg_name == flag_arg_name(self.region_arg)
 
     def get_region_completions(self, scope, region) -> list:
-        if scope == RegionalScopes.PROVINCIAL.value:
+        if scope == RegionalScopes.SUBNATIONAL.value:
             return self.location_service.get_subnationals()
         elif scope == RegionalScopes.REGIONAL.value:
             return self.location_service.get_regions() if region == "" else self.location_service.search_regions(region)

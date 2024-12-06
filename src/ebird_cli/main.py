@@ -1,5 +1,7 @@
 import argparse
 import os
+import re
+
 from .services.location import LocationService
 from .services.printing import PrintingService
 from .services.observation import ObservationService
@@ -13,10 +15,22 @@ from colorama import Fore
 
 api_key_env_variable = "EBIRDAPIKEY"
 locale_env_variable = "EBIRDLOCALE"
+default_region_env_variable = "EBIRDDEFAULTREGION"
 year_list_env_variable = "EBIRDYEARLIST"
 life_list_env_variable = "EBIRDLIFELIST"
 lat_env_variable = "EBIRDLAT"
 long_env_variable = "EBIRDLONG"
+
+region_regex = "[A-Z]{2}-[A-Z]{2}-[A-Z]{2}"
+
+
+def regex_type(pattern: str | re.Pattern):
+    def closure_check_regex(arg_value):
+        if not re.match(pattern, arg_value):
+            raise argparse.ArgumentTypeError("invalid value")
+        return arg_value
+
+    return closure_check_regex
 
 
 def print_menu(commands):
@@ -60,8 +74,10 @@ def setup_parser(parser: argparse.ArgumentParser):
 
     parser.add_argument(
         "--region",
-        default="CA-QC",
-        help="eBird subnational region code",
+        default=os.getenv(default_region_env_variable),
+        required=os.getenv(default_region_env_variable) is None,
+        help="eBird subnational level 2 region code",
+        type=regex_type(region_regex),
     )
 
     parser.add_argument(
