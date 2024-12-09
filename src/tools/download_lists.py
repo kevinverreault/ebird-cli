@@ -1,3 +1,5 @@
+import os
+
 import requests
 import sys
 from pathlib import Path
@@ -32,11 +34,8 @@ def main():
     session_id = sys.argv[1]
     output_dir = sys.argv[2]
 
-    if output_dir[:-1] != '/':
-        output_dir += '/'
-
-    download_csv(session_id, 'https://ebird.org/lifelist?r=world&time=life&fmt=csv', output_dir + "life_list.csv")
-    download_csv(session_id, 'https://ebird.org/lifelist?r=world&time=year&year=2024&fmt=csv', output_dir + "year_list.csv")
+    download_csv(session_id, 'https://ebird.org/lifelist?r=world&time=life&fmt=csv', os.path.join(output_dir, "life_list.csv"))
+    download_csv(session_id, 'https://ebird.org/lifelist?r=world&time=year&year=2024&fmt=csv', os.path.join(output_dir, "year_list.csv"))
 
 
 if __name__ == "__main__":

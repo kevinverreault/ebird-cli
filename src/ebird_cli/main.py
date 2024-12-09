@@ -23,7 +23,7 @@ life_list_env_variable = "EBIRDLIFELIST"
 lat_env_variable = "EBIRDLAT"
 long_env_variable = "EBIRDLONG"
 
-region_regex = "[A-Z]{2}-[A-Z]{2}-[A-Z]{2}"
+region_regex = "([A-Z]{2}-){2}[A-Z]{2}"
 
 
 def regex_type(pattern: str | re.Pattern):
