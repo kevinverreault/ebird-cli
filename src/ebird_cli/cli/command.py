@@ -3,7 +3,7 @@ from typing import Generator, List, Dict
 from colorama import Fore
 from .argument_parser import CliArgumentParser
 from .command_argument import CommandArgument, RegionScopeArgument, BackArgument, ArgumentNames
-from .input_processing import preprocess_input, FLAG, flag_arg_name
+from .input_processing import preprocess_input, FLAG
 from ..domain.regional_scopes import RegionalScopes
 from ..services.location import LocationService
 from ..services.observation import ObservationService
@@ -183,7 +183,7 @@ class RecentCommand(ObservationCommand):
         if scope == RegionalScopes.NEARBY.value:
             observations = self.observation_service.get_nearby_recent_observations(back)
         else:
-            observations = self.observation_service.get_recent_observations(self.location_service.get_region_ids_by_scope(region, scope))
+            observations = self.observation_service.get_recent_observations(self.location_service.get_region_ids_by_scope(region, scope), back)
 
         self.printing_service.print_recent(observations)
 
@@ -199,6 +199,6 @@ class NotableCommand(ObservationCommand):
         if scope == RegionalScopes.NEARBY.value:
             observations = self.observation_service.get_nearby_notable_observations(back)
         else:
-            observations = self.observation_service.get_notable_observations(self.location_service.get_region_ids_by_scope(region, scope))
+            observations = self.observation_service.get_notable_observations(self.location_service.get_region_ids_by_scope(region, scope), back)
 
         self.printing_service.print_notable(observations)

@@ -1,3 +1,5 @@
+from itertools import chain
+
 from ebird.api import Client
 from ..domain import Observation
 
@@ -52,9 +54,10 @@ class ObservationService:
     def get_recent_observations(self, locations: [], back=DEFAULT_DAYS) -> list:
         self.configure_client(back)
 
-        observations = list()
-        for loc in locations:
-            observations.extend(self.api_client.get_observations(loc))
+        locs = list(set(
+            chain.from_iterable(item if isinstance(item, list) else [item] for item in locations)
+        ))
+        observations = self.api_client.get_observations(locs)
 
         return self.get_observations_from_recent(observations)
 
@@ -66,7 +69,3 @@ class ObservationService:
                 unique[obs.name] = obs
 
         return sorted(unique.values(), key=lambda x: x.observation_datetime)
-
-    def set_range_in_days(self, days):
-        return days
-
