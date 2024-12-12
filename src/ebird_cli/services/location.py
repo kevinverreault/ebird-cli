@@ -1,14 +1,19 @@
 import json
 import os
+import pandas
 from .dataframe import DataFrameService
 from ..domain.fields import EbirdFields
 from ..domain.regional_scopes import RegionalScopes
+from ..domain.location_cache import LocationCache
 
 FAVORITES_FILE = "~/ebird_data/favorites.json"
 
 
 class LocationService(DataFrameService):
-    def __init__(self, default_region):
+    def __init__(self, location_cache: LocationCache):
+        self.default_regions = {}
+        self.subnationals = {}
+        self.location_cache = location_cache
 
         fav_file = os.path.expanduser(FAVORITES_FILE)
         if os.path.isfile(fav_file):
@@ -20,48 +25,46 @@ class LocationService(DataFrameService):
         else:
             self.favorites = None
 
-        with open(os.path.join(os.path.dirname(__file__), "../data/ca-qc_hotspots.json"), 'r', encoding='utf-8') as file:
-            hotspots_json = json.load(file)
-        self.hotspots = {entry["locId"]: entry for entry in hotspots_json}
+    def get_column(self, df: pandas.DataFrame, column: str):
+        if not df.empty:
+            return df[column].to_list()
+        else:
+            return []
 
-        with open(os.path.join(os.path.dirname(__file__), "../data/ca-qc_subregions.json"), 'r', encoding='utf-8') as file:
-            subregions_json = json.load(file)
-        self.regions = {entry['name']: entry['code'] for entry in subregions_json}
+    def search_by(self, df: pandas.DataFrame, column: str, value: str):
+        return df[df[column].str.contains(value, na=False, case=False)]
 
-        self.subnationals = {"Québec": default_region[:5]}
+    def get_by(self, df: pandas.DataFrame, column: str, value: str):
+        return df[df[column] == value]
 
-    def get_subnationals(self) -> list:
-        return [key for key, value in self.subnationals.items()]
+    def get_subnationals(self):
+        return self.location_cache.subnationals[EbirdFields.name].to_list()
+
+    def search_subnationals(self, region_name: str) -> list:
+        return self.get_column(self.search_by(self.location_cache.subnationals, EbirdFields.name, region_name), EbirdFields.name)
 
     def get_subnational_id(self, subnational_name):
-        return [value for key, value in self.subnationals.items() if subnational_name == key]
+        return self.get_column(self.search_by(self.location_cache.subnationals, EbirdFields.name, subnational_name), EbirdFields.code)
 
     def get_regions(self) -> list:
-        return list(self.regions.keys())
+        return self.location_cache.subregionals[EbirdFields.name].to_list()
 
     def search_regions(self, region_name: str) -> list:
-        return [key for key in self.regions.keys() if region_name.lower() in key.lower()]
+        return self.get_column(self.search_by(self.location_cache.subregionals, EbirdFields.name, region_name), EbirdFields.name)
 
     def get_region_id(self, region_name: str) -> list:
-        return [value for key, value in self.regions.items() if region_name == key]
+        return self.get_column(self.search_by(self.location_cache.subregionals, EbirdFields.name, region_name), EbirdFields.code)
 
     def get_hotspots(self) -> list:
-        return [value[EbirdFields.location_name] for value in self.hotspots.values() if EbirdFields.location_name in value] + self.get_favorites()
-
-    def hotspot_exists(self, hotspot_name: str) -> bool:
-        return any(
-            EbirdFields.location_name in value and
-            (hotspot_name == value[EbirdFields.location_name] or hotspot_name in self.favorites)
-            for key, value in self.hotspots.items()
-        )
+        return self.location_cache.hotspots[EbirdFields.location_name].to_list() + self.get_favorites()
 
     def get_hotspot_ids(self, hotspot_name: str) -> list:
-        return [value[EbirdFields.location_id] for key, value in self.hotspots.items() if
-                EbirdFields.location_name in value and hotspot_name == value[EbirdFields.location_name]] + [value for key, value in self.favorites.items() if hotspot_name == key]
+        hotspots = self.get_by(self.location_cache.hotspots, EbirdFields.location_name, hotspot_name)
+        return self.get_column(hotspots, EbirdFields.location_id) + [value for key, value in self.favorites.items() if hotspot_name == key]
 
     def search_hotspots(self, hotspot_name: str) -> list:
-        return [value[EbirdFields.location_name] for key, value in self.hotspots.items() if
-                EbirdFields.location_name in value and hotspot_name.lower() in value[EbirdFields.location_name].lower()] + self.search_favorites(hotspot_name)
+        hotspots = self.search_by(self.location_cache.hotspots, EbirdFields.location_name, hotspot_name)
+        return self.get_column(hotspots, EbirdFields.location_name) + self.search_favorites(hotspot_name)
 
     def get_favorites(self) -> list:
         return [*self.favorites] if self.favorites else []
@@ -72,13 +75,19 @@ class LocationService(DataFrameService):
 
         return [key for key, value in self.favorites.items() if favorite_name.lower() in key.lower()]
 
-    def get_region_ids_by_scope(self, region_name: str, scope: RegionalScopes) -> list:
+    def get_region_ids_by_scope(self, region_name: str | None, scope: RegionalScopes) -> list:
         regions = []
-        if scope == RegionalScopes.PROVINCIAL.value:
-            regions = self.get_subnational_id(region_name)
-        elif scope == RegionalScopes.REGIONAL.value:
-            regions = self.get_region_id(region_name)
-        elif scope == RegionalScopes.HOTSPOT.value:
-            regions = self.get_hotspot_ids(region_name)
+        if region_name is not None:
+            if scope == RegionalScopes.SUBNATIONAL.value:
+                regions = self.get_subnational_id(region_name)
+            elif scope == RegionalScopes.REGIONAL.value:
+                regions = self.get_region_id(region_name)
+            elif scope == RegionalScopes.HOTSPOT.value:
+                regions = self.get_hotspot_ids(region_name)
+        else:
+            regions.append(self.get_default_by_scope(scope))
 
         return regions
+
+    def get_default_by_scope(self, scope: RegionalScopes):
+        return self.location_cache.region.subnational if scope == RegionalScopes.SUBNATIONAL.value else self.location_cache.region.regional

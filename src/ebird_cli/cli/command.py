@@ -3,7 +3,7 @@ from typing import Generator, List, Dict
 from colorama import Fore
 from .argument_parser import CliArgumentParser
 from .command_argument import CommandArgument, RegionScopeArgument, BackArgument, ArgumentNames
-from .input_processing import preprocess_input, FLAG, flag_arg_name
+from .input_processing import preprocess_input, FLAG
 from ..domain.regional_scopes import RegionalScopes
 from ..services.location import LocationService
 from ..services.observation import ObservationService
@@ -162,13 +162,13 @@ class ObservationCommand(Command):
         scope = kwargs[self.scope_arg]
         days_back = kwargs[self.back_arg]
 
-        self.handle_observations(self.location_service.get_region_ids_by_scope(region, scope), days_back)
+        self.handle_observations(region, scope, days_back)
 
     def register_arguments(self):
         self.arguments = [RegionScopeArgument(self.location_service),
                           BackArgument()]
 
-    def handle_observations(self, regions, back):
+    def handle_observations(self, region, scope, back):
         raise NotImplementedError
 
 
@@ -179,8 +179,13 @@ class RecentCommand(ObservationCommand):
         self.command_name = "recent"
         self.description = "Retrieve recent observations for the specified region"
 
-    def handle_observations(self, regions, back):
-        self.printing_service.print_recent(self.observation_service.get_unique_recent_observations(regions, back))
+    def handle_observations(self, region, scope, back):
+        if scope == RegionalScopes.NEARBY.value:
+            observations = self.observation_service.get_nearby_recent_observations(back)
+        else:
+            observations = self.observation_service.get_recent_observations(self.location_service.get_region_ids_by_scope(region, scope), back)
+
+        self.printing_service.print_recent(observations)
 
 
 class NotableCommand(ObservationCommand):
@@ -190,5 +195,10 @@ class NotableCommand(ObservationCommand):
         self.command_name = "notable"
         self.description = "Retrieve notable observations for the specified region"
 
-    def handle_observations(self, regions, back):
-        self.printing_service.print_notable(self.observation_service.get_notable_observations(regions, back))
+    def handle_observations(self, region, scope: str, back):
+        if scope == RegionalScopes.NEARBY.value:
+            observations = self.observation_service.get_nearby_notable_observations(back)
+        else:
+            observations = self.observation_service.get_notable_observations(self.location_service.get_region_ids_by_scope(region, scope), back)
+
+        self.printing_service.print_notable(observations)

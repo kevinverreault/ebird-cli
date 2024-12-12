@@ -57,7 +57,7 @@ class RegionScopeArgument(CommandArgument):
 
     def setup_parser(self, parser: CliArgumentParser):
         parser.add_positional_argument(self.scope_arg, type=str, choices=[scope.value for scope in RegionalScopes], help='Regional scope')
-        parser.add_flag_argument(flag_arg_name(self.region_arg), type=str, required=True, help='Region code')
+        parser.add_flag_argument(flag_arg_name(self.region_arg), type=str, required=False, help='Region code')
 
     def get_mandatory_arguments(self):
         return [self.scope_arg, flag_arg_name(self.region_arg)]
@@ -75,8 +75,8 @@ class RegionScopeArgument(CommandArgument):
         return arg_name == flag_arg_name(self.region_arg)
 
     def get_region_completions(self, scope, region) -> list:
-        if scope == RegionalScopes.PROVINCIAL.value:
-            return self.location_service.get_subnationals()
+        if scope == RegionalScopes.SUBNATIONAL.value:
+            return self.location_service.get_subnationals() if region == "" else self.location_service.search_subnationals(region)
         elif scope == RegionalScopes.REGIONAL.value:
             return self.location_service.get_regions() if region == "" else self.location_service.search_regions(region)
         elif scope == RegionalScopes.HOTSPOT.value:
@@ -87,7 +87,7 @@ class RegionScopeArgument(CommandArgument):
 
 class BackArgument(CommandArgument):
     back_arg = str(ArgumentNames.BACK.value)
-    days_back = [str(num) for num in list(range(1, 31))]
+    days_back = [str(num) for num in list(range(1, 30))]
 
     def get_flag_values(self, user_input, start_position) -> Generator:
         for completion in [day for day in self.days_back if user_input.back in day]:

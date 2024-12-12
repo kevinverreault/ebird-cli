@@ -3,6 +3,7 @@ from enum import Enum
 
 class RegionalScopes(Enum):
     HOTSPOT = "hotspot"
+    NEARBY = "nearby"
     REGIONAL = "regional"
-    PROVINCIAL = "provincial"
+    SUBNATIONAL = "subnational"
     # NATIONAL = "national"

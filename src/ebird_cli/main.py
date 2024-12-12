@@ -1,23 +1,38 @@
 import argparse
-import datetime
 import os
-from prompt_toolkit.shortcuts import input_dialog
+import re
+
+from .services.cache import CacheService
 from .services.location import LocationService
 from .services.printing import PrintingService
 from .services.observation import ObservationService
-from .cli.command import Command, RecentCommand, NotableCommand
+from .domain.region import Region
+from .cli.command import RecentCommand, NotableCommand
 from .cli.autocomplete import ContextSensitiveCompleter
 from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
-from .utils.logger import logger
 from colorama import Fore
 
 api_key_env_variable = "EBIRDAPIKEY"
 locale_env_variable = "EBIRDLOCALE"
+default_region_env_variable = "EBIRDDEFAULTREGION"
 year_list_env_variable = "EBIRDYEARLIST"
 life_list_env_variable = "EBIRDLIFELIST"
+lat_env_variable = "EBIRDLAT"
+long_env_variable = "EBIRDLONG"
+
+region_regex = "([A-Z]{2}-){2}[A-Z]{2}"
+
+
+def regex_type(pattern: str | re.Pattern):
+    def closure_check_regex(arg_value):
+        if not re.match(pattern, arg_value):
+            raise argparse.ArgumentTypeError("invalid value")
+        return arg_value
+
+    return closure_check_regex
 
 
 def print_menu(commands):
@@ -51,23 +66,77 @@ def setup_key_bindings():
     return bindings
 
 
+def setup_parser(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "--api-key",
+        default=os.getenv(api_key_env_variable),
+        required=os.getenv(api_key_env_variable) is None,
+        help=f"eBird API key (mandatory if {api_key_env_variable} env variable is not set)",
+    )
+
+    parser.add_argument(
+        "--region",
+        default=os.getenv(default_region_env_variable),
+        required=os.getenv(default_region_env_variable) is None,
+        help="eBird subnational level 2 region code",
+        type=regex_type(region_regex),
+    )
+
+    parser.add_argument(
+        "--locale",
+        type=str,
+        default=os.getenv(locale_env_variable) if os.getenv(locale_env_variable) is not None else "fr",
+        help="Locale",
+    )
+
+    parser.add_argument(
+        "--lat",
+        type=str,
+        default=os.getenv(lat_env_variable),
+        help="Latitude",
+    )
+
+    parser.add_argument(
+        "--long",
+        type=str,
+        default=os.getenv(long_env_variable),
+        help="Longitude",
+    )
+
+    parser.add_argument(
+        "--year-list",
+        type=str,
+        default=os.getenv(year_list_env_variable),
+        help="List of observations for the current year",
+    )
+
+    parser.add_argument(
+        "--life-list",
+        type=str,
+        default=os.getenv(life_list_env_variable),
+        help="List of lifetime observations",
+    )
+
+
 def main():
-    key_input = ""
-    if os.getenv(api_key_env_variable) is None:
-        print(f"{api_key_env_variable} not set.")
-        key_input = input_dialog(
-            title='eBird API key',
-            text='Please type your eBird API key:').run()
+    parser = argparse.ArgumentParser(description="eBird CLI")
+    setup_parser(parser)
 
-    api_key = os.getenv(api_key_env_variable) or key_input
-    locale = os.getenv(locale_env_variable) or "en"
-    observation_service = ObservationService(api_key, locale)
+    args = parser.parse_args()
 
-    life_list = os.getenv(life_list_env_variable) or '~/ebird_data/life_list.csv'  # None
-    year_list = os.getenv(year_list_env_variable) or f"~/ebird_data/ebird_CA-QC_year_{datetime.datetime.now().year}_list.csv"  # None
+    api_key = args.api_key
+    region = args.region
+    locale = args.locale
+    lat = args.lat
+    long = args.long
+
+    life_list = args.life_list or None
+    year_list = args.year_list or None
+
+    cache_service = CacheService(api_key, locale, Region(region))
+    observation_service = ObservationService(api_key, locale, lat, long)
     printing_service = PrintingService(life_list, year_list)
-
-    location_service = LocationService("CA-QC-MR")
+    location_service = LocationService(cache_service.location_cache)
 
     commands = {command.command_name: command for command in
                 [cls(observation_service, location_service, printing_service) for cls in [RecentCommand, NotableCommand]]}
@@ -86,7 +155,7 @@ def main():
         try:
             print("")
             user_input = session.prompt(f"⋙  ", style=style)
-            if user_input.lower() == "exit":
+            if user_input.lower() == "exit" or user_input.lower() == "e":
                 print("Exiting eBird CLI.")
                 break
 
