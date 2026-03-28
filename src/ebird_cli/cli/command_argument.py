@@ -5,13 +5,14 @@ from prompt_toolkit.completion import Completion
 from .argument_parser import CliArgumentParser
 from .input_processing import flag_arg_name
 from ..domain.regional_scopes import RegionalScopes
-from ..services import LocationService
+from ..services import LocationService, TaxonomyService
 
 
 class ArgumentNames(Enum):
     SCOPE = "scope"
     REGION = "region"
     BACK = "back"
+    SPECIES = "species"
 
 
 class CommandArgument(ABC):
@@ -110,3 +111,34 @@ class BackArgument(CommandArgument):
 
     def supports_flag_argument_completion(self, arg_name: str):
         return arg_name == flag_arg_name(self.back_arg)
+
+
+class SpeciesArgument(CommandArgument):
+    species_arg = str(ArgumentNames.SPECIES.value)
+
+    def __init__(self, taxonomy_service: TaxonomyService):
+        self.taxonomy_service = taxonomy_service
+
+    def get_flag_values(self, user_input, start_position) -> Generator:
+        name = user_input.species or ""
+        completions = self.taxonomy_service.search_by_common_name(name) if name else []
+        for completion in completions:
+            yield Completion(completion, start_position=start_position)
+
+    def setup_parser(self, parser: CliArgumentParser):
+        parser.add_flag_argument(flag_arg_name(self.species_arg), type=str, required=False, help="Species common name")
+
+    def get_mandatory_arguments(self):
+        return []
+
+    def get_optional_arguments(self):
+        return [flag_arg_name(self.species_arg)]
+
+    def arg_is_multi_word(self, arg_name: str):
+        return arg_name == flag_arg_name(self.species_arg)
+
+    def get_keywords(self, user_input):
+        return {self.species_arg: user_input.species}
+
+    def supports_flag_argument_completion(self, arg_name: str):
+        return arg_name == flag_arg_name(self.species_arg)

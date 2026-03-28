@@ -6,6 +6,7 @@ from .services.cache import CacheService
 from .services.location import LocationService
 from .services.printing import PrintingService
 from .services.observation import ObservationService
+from .services.taxonomy import TaxonomyService
 from .domain.region import Region
 from .cli.command import RecentCommand, NotableCommand
 from .cli.autocomplete import ContextSensitiveCompleter
@@ -137,9 +138,12 @@ def main():
     observation_service = ObservationService(api_key, locale, lat, long)
     printing_service = PrintingService(life_list, year_list)
     location_service = LocationService(cache_service.location_cache)
+    taxonomy_service = TaxonomyService(cache_service.taxonomy_cache)
 
-    commands = {command.command_name: command for command in
-                [cls(observation_service, location_service, printing_service) for cls in [RecentCommand, NotableCommand]]}
+    commands = {command.command_name: command for command in [
+        RecentCommand(observation_service, location_service, printing_service, taxonomy_service),
+        NotableCommand(observation_service, location_service, printing_service),
+    ]}
 
     style = Style.from_dict({
         'prompt': 'ansigreen bold',
@@ -154,7 +158,7 @@ def main():
     while True:
         try:
             print("")
-            user_input = session.prompt(f"⋙  ", style=style)
+            user_input = session.prompt("⋙  ", style=style)
             if user_input.lower() == "exit" or user_input.lower() == "e":
                 print("Exiting eBird CLI.")
                 break

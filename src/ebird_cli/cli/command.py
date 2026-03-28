@@ -2,12 +2,13 @@ from typing import Generator, List, Dict
 
 from colorama import Fore
 from .argument_parser import CliArgumentParser
-from .command_argument import CommandArgument, RegionScopeArgument, BackArgument, ArgumentNames
+from .command_argument import CommandArgument, RegionScopeArgument, BackArgument, SpeciesArgument, ArgumentNames
 from .input_processing import preprocess_input, FLAG
 from ..domain.regional_scopes import RegionalScopes
 from ..services.location import LocationService
 from ..services.observation import ObservationService
 from ..services.printing import PrintingService
+from ..services.taxonomy import TaxonomyService
 from ..utils.logger import logger
 import argparse
 from prompt_toolkit.completion import Completer, Completion, WordCompleter
@@ -173,17 +174,43 @@ class ObservationCommand(Command):
 
 
 class RecentCommand(ObservationCommand):
-    def __init__(self, observation_service: ObservationService, location_service: LocationService, printing_service: PrintingService):
+    species_arg = str(ArgumentNames.SPECIES.value)
+
+    def __init__(self, observation_service: ObservationService, location_service: LocationService, printing_service: PrintingService, taxonomy_service: TaxonomyService):
+        self.taxonomy_service = taxonomy_service
         super().__init__(observation_service, location_service, printing_service)
 
         self.command_name = "recent"
         self.description = "Retrieve recent observations for the specified region"
 
-    def handle_observations(self, region, scope, back):
-        if scope == RegionalScopes.NEARBY.value:
-            observations = self.observation_service.get_nearby_recent_observations(back)
+    def register_arguments(self):
+        self.arguments = [RegionScopeArgument(self.location_service),
+                          BackArgument(),
+                          SpeciesArgument(self.taxonomy_service)]
+
+    def process_command(self, **kwargs):
+        region = kwargs[self.region_arg]
+        scope = kwargs[self.scope_arg]
+        back = kwargs[self.back_arg]
+        species = kwargs.get(self.species_arg)
+
+        self.handle_observations(region, scope, back, species)
+
+    def handle_observations(self, region, scope, back, species=None):
+        if species:
+            species_codes = self.taxonomy_service.get_species_code(species)
+            if not species_codes:
+                return
+            species_code = species_codes[0]
+            if scope == RegionalScopes.NEARBY.value:
+                observations = self.observation_service.get_nearby_species_observations(species_code, back)
+            else:
+                observations = self.observation_service.get_species_observations(self.location_service.get_region_ids_by_scope(region, scope), species_code, back)
         else:
-            observations = self.observation_service.get_recent_observations(self.location_service.get_region_ids_by_scope(region, scope), back)
+            if scope == RegionalScopes.NEARBY.value:
+                observations = self.observation_service.get_nearby_recent_observations(back)
+            else:
+                observations = self.observation_service.get_recent_observations(self.location_service.get_region_ids_by_scope(region, scope), back)
 
         self.printing_service.print_recent(observations)
 
