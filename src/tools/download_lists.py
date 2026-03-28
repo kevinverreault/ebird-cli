@@ -1,8 +1,9 @@
 import os
+import sys
+from datetime import datetime
+from pathlib import Path
 
 import requests
-import sys
-from pathlib import Path
 
 
 def download_csv(session_id, download_url, output_file):
@@ -35,7 +36,8 @@ def main():
     output_dir = sys.argv[2]
 
     download_csv(session_id, 'https://ebird.org/lifelist?r=world&time=life&fmt=csv', os.path.join(output_dir, "life_list.csv"))
-    download_csv(session_id, 'https://ebird.org/lifelist?r=world&time=year&year=2024&fmt=csv', os.path.join(output_dir, "year_list.csv"))
+    current_year = datetime.now().year
+    download_csv(session_id, f'https://ebird.org/lifelist?r=world&time=year&year={current_year}&fmt=csv', os.path.join(output_dir, "year_list.csv"))
 
 
 if __name__ == "__main__":

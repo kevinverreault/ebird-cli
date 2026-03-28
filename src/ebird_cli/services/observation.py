@@ -51,7 +51,7 @@ class ObservationService:
 
         return self.get_observations_from_recent(observations)
 
-    def get_recent_observations(self, locations: [], back=DEFAULT_DAYS) -> list:
+    def get_recent_observations(self, locations: list, back=DEFAULT_DAYS) -> list:
         self.configure_client(back)
 
         locs = list(set(
