@@ -4,7 +4,7 @@ A command-line interface for exploring eBird bird observation data.
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - eBird API Key (obtainable with free eBird account)
 
 ## Installation
@@ -93,6 +93,18 @@ When using `--year-list` and `--life-list`:
 - Year list targets are highlighted in **green**
 - Life list targets are highlighted in **red**
 
+### Obtaining list files
+
+The eBird API does not expose life list or year list data, so these CSV files must be downloaded manually from the eBird website. A helper script is provided to facilitate the process:
+
+```bash
+python src/tools/download_lists.py session_id output_dir
+```
+
+This requires a valid eBird session cookie (`EBIRD_SESSIONID`), which can be obtained from your browser after logging in to ebird.org. The script must be re-run whenever your lists change.
+
+> **Note:** The life list only changes when you see a species for the first time ever, making it infrequent and easy to manage. The year list changes with every new species seen in the current year and resets annually, requiring more frequent re-runs of the script.
+
 ## Development setup
 
 ### Virtual environment
@@ -105,6 +117,19 @@ When using `--year-list` and `--life-list`:
    ```bash
    pip install -r requirements.txt
    ```
+
+## Credits
+
+Bird observation data and the eBird platform are provided by the [Cornell Lab of Ornithology](https://www.birds.cornell.edu/). This project would not be possible without their freely available [eBird API](https://documenter.getpostman.com/view/664302/S1ENwy59).
+
+This project relies on the following open-source packages:
+
+- [ebird-api](https://pypi.org/project/ebird-api/) — Python wrapper for the eBird API
+- [prompt_toolkit](https://python-prompt-toolkit.readthedocs.io/) — Interactive command-line interface with autocompletion
+- [rich](https://rich.readthedocs.io/) — Terminal formatting and highlighted output
+- [pandas](https://pandas.pydata.org/) — CSV observation list parsing
+- [colorama](https://pypi.org/project/colorama/) — Cross-platform terminal color support
+- [requests](https://requests.readthedocs.io/) — HTTP requests to the eBird API
 
 ## License
 

@@ -16,5 +16,5 @@ class Observation(object):
         else:
             self.observation_datetime = datetime.strptime(observation[EbirdFields.observation_date], date_format)
         self.location = re.sub(regex_filter, "", observation[EbirdFields.location_name]).split(",")[0][0:55]
-        self.name = re.sub(regex_filter, "", observation[EbirdFields.common_name])
+        self.name = re.sub(regex_filter, "", observation[EbirdFields.common_name]).strip()
         self.subname = observation[EbirdFields.sub_subnational_name] if EbirdFields.sub_subnational_name in observation.keys() else ""

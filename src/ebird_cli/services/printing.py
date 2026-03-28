@@ -5,7 +5,7 @@ from rich.table import Table
 
 
 class PrintingService(DataFrameService):
-    def __init__(self, life_list: str or None, year_list: str or None):
+    def __init__(self, life_list: str | None, year_list: str | None):
         self.life_list = self.get_dataframe(life_list) if life_list else None
         self.year_list = self.get_dataframe(year_list) if year_list else None
         self.console = Console()
