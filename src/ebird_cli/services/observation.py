@@ -74,9 +74,6 @@ class ObservationService:
     def get_nearby_species_observations(self, species_code: str, back=DEFAULT_DAYS) -> list:
         self.configure_client(back)
 
-        print(self.lat)
-        print(self.long)
-
         observations = self.api_client.get_nearby_species(species_code, self.lat, self.long)
 
         return self.get_observations_from_species(observations)

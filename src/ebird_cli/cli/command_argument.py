@@ -3,7 +3,7 @@ from typing import Generator
 from abc import ABC, abstractmethod
 from prompt_toolkit.completion import Completion
 from .argument_parser import CliArgumentParser
-from .input_processing import flag_arg_name
+from .input_processing import flag_arg_name, FLAG
 from ..domain.regional_scopes import RegionalScopes
 from ..services import LocationService, TaxonomyService
 
@@ -44,6 +44,9 @@ class CommandArgument(ABC):
     def supports_flag_argument_completion(self, arg_name: str):
         pass
 
+    def get_excluded_flags(self, _words) -> list:
+        return []
+
 
 class RegionScopeArgument(CommandArgument):
     scope_arg = str(ArgumentNames.SCOPE.value)
@@ -74,6 +77,12 @@ class RegionScopeArgument(CommandArgument):
 
     def supports_flag_argument_completion(self, arg_name: str):
         return arg_name == flag_arg_name(self.region_arg)
+
+    def get_excluded_flags(self, words) -> list:
+        positional_words = [w for w in words if not w.startswith(FLAG)]
+        if positional_words and positional_words[0] == RegionalScopes.NEARBY.value:
+            return [flag_arg_name(self.region_arg)]
+        return []
 
     def get_region_completions(self, scope, region) -> list:
         if scope == RegionalScopes.SUBNATIONAL.value:

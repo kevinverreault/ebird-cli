@@ -19,7 +19,6 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 class CacheService:
     def __init__(self, api_key: str, locale: str, region: Region):
         self.api_client = Client(api_key, locale)
-        print(locale)
         self.api_client.detail = "full"
 
         os.makedirs(CACHE_DIR, exist_ok=True)

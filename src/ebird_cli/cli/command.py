@@ -90,9 +90,13 @@ class Command(Completer):
 
     def get_flag_arg_completions(self, document, complete_event, words) -> Generator:
         flag_count = len([s for s in words if s.startswith(FLAG)])
+        excluded_flags = []
+        for argument in self.arguments:
+            excluded_flags.extend(argument.get_excluded_flags(words))
+        effective_mandatory_count = len([p for p in self.mandatory_params if p.startswith(FLAG) and p not in excluded_flags])
 
         for completion in [completion for completion in self.flag_completer.get_completions(document, complete_event) if
-                           completion.text not in words and (completion.text in self.mandatory_params or flag_count >= len(self.mandatory_params))]:
+                           completion.text not in words and completion.text not in excluded_flags and (completion.text in self.mandatory_params or flag_count >= effective_mandatory_count)]:
             if words[-1] == "":
                 start_position = -len(document.get_word_before_cursor())
             else:
@@ -185,8 +189,8 @@ class RecentCommand(ObservationCommand):
 
     def register_arguments(self):
         self.arguments = [RegionScopeArgument(self.location_service),
-                          BackArgument(),
-                          SpeciesArgument(self.taxonomy_service)]
+                          SpeciesArgument(self.taxonomy_service),
+                          BackArgument()]
 
     def process_command(self, **kwargs):
         region = kwargs[self.region_arg]
