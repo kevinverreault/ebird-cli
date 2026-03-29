@@ -22,10 +22,18 @@ class PrintingService(DataFrameService):
         table.add_column('Date', style='magenta')
         table.add_column('Observation')
         table.add_column('Location')
-        table.add_column('Region')
+
+        regions = {obs.subname for obs in observations}
+        show_region = len(regions) > 1
+
+        if show_region:
+            table.add_column('Region')
 
         for observation in observations:
-            table.add_row(observation.observation_date, self.get_observation_text(observation), location(observation), observation.subname)
+            row = (observation.observation_date, self.get_observation_text(observation), location(observation))
+            if show_region:
+                row += (observation.subname,)
+            table.add_row(*row)
 
         print()
         self.console.print(table)
