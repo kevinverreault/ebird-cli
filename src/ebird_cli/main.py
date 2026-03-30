@@ -79,7 +79,7 @@ def setup_parser(parser: argparse.ArgumentParser):
         "--region",
         default=os.getenv(default_region_env_variable),
         required=os.getenv(default_region_env_variable) is None,
-        help="eBird subnational level 2 region code",
+        help=f"eBird subnational level 2 region code is mandatory if {default_region_env_variable} env variable is not set",
         type=regex_type(region_regex),
     )
 

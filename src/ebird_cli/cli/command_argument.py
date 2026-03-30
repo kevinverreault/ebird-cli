@@ -64,10 +64,10 @@ class RegionScopeArgument(CommandArgument):
         parser.add_flag_argument(flag_arg_name(self.region_arg), type=str, required=False, help='Region code')
 
     def get_mandatory_arguments(self):
-        return [self.scope_arg, flag_arg_name(self.region_arg)]
+        return [self.scope_arg]
 
     def get_optional_arguments(self):
-        return []
+        return [flag_arg_name(self.region_arg)]
 
     def arg_is_multi_word(self, arg_name: str):
         return arg_name == flag_arg_name(self.region_arg)

@@ -1,4 +1,5 @@
-from typing import Generator, List, Dict
+from dataclasses import dataclass
+from typing import Generator, List, Dict, Optional
 
 from colorama import Fore
 from .argument_parser import CliArgumentParser
@@ -153,33 +154,39 @@ class Command(Completer):
         return f"{command_name:18} {mandatory_params} {optional_params}"
 
 
-class ObservationCommand(Command):
-    pass
+@dataclass
+class ObservationCommandArgs:
+    region: str
+    scope: str
+    back: int
+    species: Optional[str] = None
 
+
+class ObservationCommand(Command):
     scope_arg = str(ArgumentNames.SCOPE.value)
     region_arg = str(ArgumentNames.REGION.value)
     back_arg = str(ArgumentNames.BACK.value)
+    species_arg = str(ArgumentNames.SPECIES.value)
 
     def process_command(self, **kwargs):
         logger.debug(f"process_command - kwargs: {kwargs}")
-
-        region = kwargs[self.region_arg]
-        scope = kwargs[self.scope_arg]
-        days_back = kwargs[self.back_arg]
-
-        self.handle_observations(region, scope, days_back)
+        args = ObservationCommandArgs(
+            region=kwargs[self.region_arg],
+            scope=kwargs[self.scope_arg],
+            back=kwargs[self.back_arg],
+            species=kwargs.get(self.species_arg),
+        )
+        self.handle_observation(args)
 
     def register_arguments(self):
         self.arguments = [RegionScopeArgument(self.location_service),
                           BackArgument()]
 
-    def handle_observations(self, region, scope, back):
+    def handle_observation(self, args: ObservationCommandArgs):
         raise NotImplementedError
 
 
 class RecentCommand(ObservationCommand):
-    species_arg = str(ArgumentNames.SPECIES.value)
-
     def __init__(self, observation_service: ObservationService, location_service: LocationService, printing_service: PrintingService, taxonomy_service: TaxonomyService):
         self.taxonomy_service = taxonomy_service
         super().__init__(observation_service, location_service, printing_service)
@@ -192,29 +199,21 @@ class RecentCommand(ObservationCommand):
                           SpeciesArgument(self.taxonomy_service),
                           BackArgument()]
 
-    def process_command(self, **kwargs):
-        region = kwargs[self.region_arg]
-        scope = kwargs[self.scope_arg]
-        back = kwargs[self.back_arg]
-        species = kwargs.get(self.species_arg)
-
-        self.handle_observations(region, scope, back, species)
-
-    def handle_observations(self, region, scope, back, species=None):
-        if species:
-            species_codes = self.taxonomy_service.get_species_code(species)
+    def handle_observation(self, args: ObservationCommandArgs):
+        if args.species:
+            species_codes = self.taxonomy_service.get_species_code(args.species)
             if not species_codes:
                 return
             species_code = species_codes[0]
-            if scope == RegionalScopes.NEARBY.value:
-                observations = self.observation_service.get_nearby_species_observations(species_code, back)
+            if args.scope == RegionalScopes.NEARBY.value:
+                observations = self.observation_service.get_nearby_species_observations(species_code, args.back)
             else:
-                observations = self.observation_service.get_species_observations(self.location_service.get_region_ids_by_scope(region, scope), species_code, back)
+                observations = self.observation_service.get_species_observations(self.location_service.get_region_ids_by_scope(args.region, args.scope), species_code, args.back)
         else:
-            if scope == RegionalScopes.NEARBY.value:
-                observations = self.observation_service.get_nearby_recent_observations(back)
+            if args.scope == RegionalScopes.NEARBY.value:
+                observations = self.observation_service.get_nearby_recent_observations(args.back)
             else:
-                observations = self.observation_service.get_recent_observations(self.location_service.get_region_ids_by_scope(region, scope), back)
+                observations = self.observation_service.get_recent_observations(self.location_service.get_region_ids_by_scope(args.region, args.scope), args.back)
 
         self.printing_service.print_recent(observations)
 
@@ -226,10 +225,10 @@ class NotableCommand(ObservationCommand):
         self.command_name = "notable"
         self.description = "Retrieve notable observations for the specified region"
 
-    def handle_observations(self, region, scope: str, back):
-        if scope == RegionalScopes.NEARBY.value:
-            observations = self.observation_service.get_nearby_notable_observations(back)
+    def handle_observation(self, args: ObservationCommandArgs):
+        if args.scope == RegionalScopes.NEARBY.value:
+            observations = self.observation_service.get_nearby_notable_observations(args.back)
         else:
-            observations = self.observation_service.get_notable_observations(self.location_service.get_region_ids_by_scope(region, scope), back)
+            observations = self.observation_service.get_notable_observations(self.location_service.get_region_ids_by_scope(args.region, args.scope), args.back)
 
         self.printing_service.print_notable(observations)

@@ -36,7 +36,7 @@ You can configure the CLI using the following environment variables to avoid man
 
 - `EBIRDAPIKEY`: Your eBird API key
 - `EBIRDDEFAULTREGION`: Default region for default search and hotspots filtering (`CA-QC-MR`)
-- `EBIRDLOCALE`: Preferred language locale (`en`)
+- `EBIRDLOCALE`: Preferred language locale (`fr`)
 - `EBIRDLAT`: Latitude for location-based searches (`47.87`)
 - `EBIRDLONG`: Longitude for location-based searches (`-72.17`)
 - `EBIRDYEARLIST`: Path to your year observations list (`~/ebird_data/year_list.csv`)
@@ -47,13 +47,13 @@ You can configure the CLI using the following environment variables to avoid man
 ### Launching the CLI
 
    ```bash
-   python -m ebird_cli.main --api-key <ebird-api-key> [optional arguments]
+   python -m ebird_cli.main --api-key <ebird-api-key> --region <region-code> [optional arguments]
    ```
 
 ### Available Commands
 
 When launched, the CLI will display a menu of available commands:
-- `recent <scope, -region> [-back]`: Fetch recent bird observations
+- `recent <scope, -region> [-back, -species]`: Fetch recent bird observations
 - `notable <scope, -region> [-back]`: Fetch notable bird observations
 
 ### Search Scopes
