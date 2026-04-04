@@ -23,6 +23,7 @@ year_list_env_variable = "EBIRDYEARLIST"
 life_list_env_variable = "EBIRDLIFELIST"
 lat_env_variable = "EBIRDLAT"
 long_env_variable = "EBIRDLONG"
+aggregations_env_variable = "EBIRDAGGREGATIONS"
 
 region_regex = "([A-Z]{2}-){2}[A-Z]{2}"
 
@@ -36,17 +37,26 @@ def regex_type(pattern: str | re.Pattern):
     return closure_check_regex
 
 
-def print_menu(commands):
+def print_menu(commands, args=None):
     examples = []
 
-    for key, value in commands.items():
+    for value in commands.values():
         examples.append(value.command_example())
     formatted_examples = '\n    '.join(f"{item}" for item in examples)
+
+    args_section = ""
+    if args is not None:
+        arg_lines = [
+            f"{Fore.BLUE}region{Fore.RESET}: {args.region}",
+            f"{Fore.BLUE}locale{Fore.RESET}: {args.locale}",
+        ]
+        args_section = "\n    Arguments:\n    \n    " + "\n    ".join(arg_lines) + "\n    "
+
     menu = f"""
     {Fore.GREEN}eBird CLI{Fore.RESET}
-    
+    {args_section}
     Available commands:
-    
+
     {formatted_examples}
     """
 
@@ -118,6 +128,13 @@ def setup_parser(parser: argparse.ArgumentParser):
         help="List of lifetime observations",
     )
 
+    parser.add_argument(
+        "--aggregations",
+        type=str,
+        default=os.getenv(aggregations_env_variable),
+        help=f"Path to aggregations JSON file (custom hotspot groups). From {aggregations_env_variable} env var",
+    )
+
 
 def main():
     parser = argparse.ArgumentParser(description="eBird CLI")
@@ -133,11 +150,12 @@ def main():
 
     life_list = args.life_list or None
     year_list = args.year_list or None
+    aggregations = args.aggregations or None
 
     cache_service = CacheService(api_key, locale, Region(region))
     observation_service = ObservationService(api_key, locale, lat, long)
     printing_service = PrintingService(life_list, year_list)
-    location_service = LocationService(cache_service.location_cache)
+    location_service = LocationService(cache_service.location_cache, aggregations)
     taxonomy_service = TaxonomyService(cache_service.taxonomy_cache)
 
     commands = {command.command_name: command for command in [
@@ -152,7 +170,7 @@ def main():
         'completion-menu.completion.current': 'bg:#00aaaa #000000',
     })
 
-    print_menu(commands)
+    print_menu(commands, args)
     session = PromptSession(completer=ContextSensitiveCompleter(commands.values()), key_bindings=setup_key_bindings())
 
     while True:
@@ -164,7 +182,7 @@ def main():
                 break
 
             if user_input == "":
-                print_menu(commands)
+                print_menu(commands, args)
                 continue
 
             args = user_input.split()

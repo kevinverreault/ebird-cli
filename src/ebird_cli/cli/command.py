@@ -108,6 +108,8 @@ class Command(Completer):
 
     def get_flag_value_completions(self, words, document: Document) -> Generator:
         user_input = self.parser.parse_args(preprocess_input(words))
+        if user_input is None:
+            return
 
         text_before_cursor = document.text_before_cursor
         words = text_before_cursor.strip().split()

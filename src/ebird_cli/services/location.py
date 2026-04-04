@@ -6,24 +6,25 @@ from ..domain.fields import EbirdFields
 from ..domain.regional_scopes import RegionalScopes
 from ..domain.location_cache import LocationCache
 
-FAVORITES_FILE = "~/ebird_data/favorites.json"
-
 
 class LocationService(DataFrameService):
-    def __init__(self, location_cache: LocationCache):
+    def __init__(self, location_cache: LocationCache, aggregations_file: str | None = None):
         self.default_regions = {}
         self.subnationals = {}
         self.location_cache = location_cache
 
-        fav_file = os.path.expanduser(FAVORITES_FILE)
-        if os.path.isfile(fav_file):
-            with open(fav_file, "r", encoding="utf-8") as file:
-                favorites = json.load(file)
-                self.favorites = {}
-                for favorite in favorites:
-                    self.favorites.update(favorite)
+        if aggregations_file:
+            agg_file = os.path.expanduser(aggregations_file)
+            if os.path.isfile(agg_file):
+                with open(agg_file, "r", encoding="utf-8") as file:
+                    aggregations = json.load(file)
+                    self.aggregations = {}
+                    for aggregation in aggregations:
+                        self.aggregations.update(aggregation)
+            else:
+                self.aggregations = None
         else:
-            self.favorites = None
+            self.aggregations = None
 
     def get_column(self, df: pandas.DataFrame, column: str):
         if not df.empty:
@@ -56,24 +57,25 @@ class LocationService(DataFrameService):
         return self.get_column(self.search_by(self.location_cache.subregionals, EbirdFields.name, region_name), EbirdFields.code)
 
     def get_hotspots(self) -> list:
-        return self.location_cache.hotspots[EbirdFields.location_name].to_list() + self.get_favorites()
+        return self.location_cache.hotspots[EbirdFields.location_name].to_list() + self.get_aggregations()
 
     def get_hotspot_ids(self, hotspot_name: str) -> list:
         hotspots = self.get_by(self.location_cache.hotspots, EbirdFields.location_name, hotspot_name)
-        return self.get_column(hotspots, EbirdFields.location_id) + [value for key, value in self.favorites.items() if hotspot_name == key]
+        aggregation_ids = [id for key, ids in (self.aggregations or {}).items() if hotspot_name == key for id in ids]
+        return self.get_column(hotspots, EbirdFields.location_id) + aggregation_ids
 
     def search_hotspots(self, hotspot_name: str) -> list:
         hotspots = self.search_by(self.location_cache.hotspots, EbirdFields.location_name, hotspot_name)
-        return self.get_column(hotspots, EbirdFields.location_name) + self.search_favorites(hotspot_name)
+        return self.get_column(hotspots, EbirdFields.location_name) + self.search_aggregations(hotspot_name)
 
-    def get_favorites(self) -> list:
-        return [*self.favorites] if self.favorites else []
+    def get_aggregations(self) -> list:
+        return [*self.aggregations] if self.aggregations else []
 
-    def search_favorites(self, favorite_name: str) -> list:
-        if not self.favorites:
+    def search_aggregations(self, aggregation_name: str) -> list:
+        if not self.aggregations:
             return []
 
-        return [key for key, value in self.favorites.items() if favorite_name.lower() in key.lower()]
+        return [key for key, value in self.aggregations.items() if aggregation_name.lower() in key.lower()]
 
     def get_region_ids_by_scope(self, region_name: str | None, scope: RegionalScopes) -> list:
         regions = []

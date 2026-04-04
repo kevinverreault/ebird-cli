@@ -17,4 +17,7 @@ class CliArgumentParser:
         self.parser.add_argument(*args, **kwargs)
 
     def parse_args(self, args):
-        return self.parser.parse_args(args)
+        try:
+            return self.parser.parse_args(args)
+        except (SystemExit, argparse.ArgumentError):
+            return None
