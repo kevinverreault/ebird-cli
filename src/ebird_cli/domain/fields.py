@@ -13,7 +13,9 @@ class EbirdFields(StrEnum):
     sub_subnational_code = "subnational2Code"
     name = "name"
     code = "code"
+    species_code = "speciesCode"
 
 
 class ExportFields(StrEnum):
     common_name = "Common Name"
+

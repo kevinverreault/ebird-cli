@@ -6,6 +6,7 @@ from .services.cache import CacheService
 from .services.location import LocationService
 from .services.printing import PrintingService
 from .services.observation import ObservationService
+from .services.taxonomy import TaxonomyService
 from .domain.region import Region
 from .cli.command import RecentCommand, NotableCommand
 from .cli.autocomplete import ContextSensitiveCompleter
@@ -22,6 +23,7 @@ year_list_env_variable = "EBIRDYEARLIST"
 life_list_env_variable = "EBIRDLIFELIST"
 lat_env_variable = "EBIRDLAT"
 long_env_variable = "EBIRDLONG"
+aggregations_env_variable = "EBIRDAGGREGATIONS"
 
 region_regex = "([A-Z]{2}-){2}[A-Z]{2}"
 
@@ -35,17 +37,26 @@ def regex_type(pattern: str | re.Pattern):
     return closure_check_regex
 
 
-def print_menu(commands):
+def print_menu(commands, args=None):
     examples = []
 
-    for key, value in commands.items():
+    for value in commands.values():
         examples.append(value.command_example())
     formatted_examples = '\n    '.join(f"{item}" for item in examples)
+
+    args_section = ""
+    if args is not None:
+        arg_lines = [
+            f"{Fore.BLUE}region{Fore.RESET}: {args.region}",
+            f"{Fore.BLUE}locale{Fore.RESET}: {args.locale}",
+        ]
+        args_section = "\n    Arguments:\n    \n    " + "\n    ".join(arg_lines) + "\n    "
+
     menu = f"""
     {Fore.GREEN}eBird CLI{Fore.RESET}
-    
+    {args_section}
     Available commands:
-    
+
     {formatted_examples}
     """
 
@@ -78,7 +89,7 @@ def setup_parser(parser: argparse.ArgumentParser):
         "--region",
         default=os.getenv(default_region_env_variable),
         required=os.getenv(default_region_env_variable) is None,
-        help="eBird subnational level 2 region code",
+        help=f"eBird subnational level 2 region code is mandatory if {default_region_env_variable} env variable is not set",
         type=regex_type(region_regex),
     )
 
@@ -117,6 +128,13 @@ def setup_parser(parser: argparse.ArgumentParser):
         help="List of lifetime observations",
     )
 
+    parser.add_argument(
+        "--aggregations",
+        type=str,
+        default=os.getenv(aggregations_env_variable),
+        help=f"Path to aggregations JSON file (custom hotspot groups). From {aggregations_env_variable} env var",
+    )
+
 
 def main():
     parser = argparse.ArgumentParser(description="eBird CLI")
@@ -132,14 +150,18 @@ def main():
 
     life_list = args.life_list or None
     year_list = args.year_list or None
+    aggregations = args.aggregations or None
 
     cache_service = CacheService(api_key, locale, Region(region))
     observation_service = ObservationService(api_key, locale, lat, long)
     printing_service = PrintingService(life_list, year_list)
-    location_service = LocationService(cache_service.location_cache)
+    location_service = LocationService(cache_service.location_cache, aggregations)
+    taxonomy_service = TaxonomyService(cache_service.taxonomy_cache)
 
-    commands = {command.command_name: command for command in
-                [cls(observation_service, location_service, printing_service) for cls in [RecentCommand, NotableCommand]]}
+    commands = {command.command_name: command for command in [
+        RecentCommand(observation_service, location_service, printing_service, taxonomy_service),
+        NotableCommand(observation_service, location_service, printing_service),
+    ]}
 
     style = Style.from_dict({
         'prompt': 'ansigreen bold',
@@ -148,19 +170,19 @@ def main():
         'completion-menu.completion.current': 'bg:#00aaaa #000000',
     })
 
-    print_menu(commands)
+    print_menu(commands, args)
     session = PromptSession(completer=ContextSensitiveCompleter(commands.values()), key_bindings=setup_key_bindings())
 
     while True:
         try:
             print("")
-            user_input = session.prompt(f"⋙  ", style=style)
+            user_input = session.prompt("⋙  ", style=style)
             if user_input.lower() == "exit" or user_input.lower() == "e":
                 print("Exiting eBird CLI.")
                 break
 
             if user_input == "":
-                print_menu(commands)
+                print_menu(commands, args)
                 continue
 
             args = user_input.split()

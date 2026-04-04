@@ -1,13 +1,15 @@
-from typing import Generator, List, Dict
+from dataclasses import dataclass
+from typing import Generator, List, Dict, Optional
 
 from colorama import Fore
 from .argument_parser import CliArgumentParser
-from .command_argument import CommandArgument, RegionScopeArgument, BackArgument, ArgumentNames
+from .command_argument import CommandArgument, RegionScopeArgument, BackArgument, SpeciesArgument, ArgumentNames
 from .input_processing import preprocess_input, FLAG
 from ..domain.regional_scopes import RegionalScopes
 from ..services.location import LocationService
 from ..services.observation import ObservationService
 from ..services.printing import PrintingService
+from ..services.taxonomy import TaxonomyService
 from ..utils.logger import logger
 import argparse
 from prompt_toolkit.completion import Completer, Completion, WordCompleter
@@ -89,9 +91,13 @@ class Command(Completer):
 
     def get_flag_arg_completions(self, document, complete_event, words) -> Generator:
         flag_count = len([s for s in words if s.startswith(FLAG)])
+        excluded_flags = []
+        for argument in self.arguments:
+            excluded_flags.extend(argument.get_excluded_flags(words))
+        effective_mandatory_count = len([p for p in self.mandatory_params if p.startswith(FLAG) and p not in excluded_flags])
 
         for completion in [completion for completion in self.flag_completer.get_completions(document, complete_event) if
-                           completion.text not in words and (completion.text in self.mandatory_params or flag_count >= len(self.mandatory_params))]:
+                           completion.text not in words and completion.text not in excluded_flags and (completion.text in self.mandatory_params or flag_count >= effective_mandatory_count)]:
             if words[-1] == "":
                 start_position = -len(document.get_word_before_cursor())
             else:
@@ -102,6 +108,8 @@ class Command(Completer):
 
     def get_flag_value_completions(self, words, document: Document) -> Generator:
         user_input = self.parser.parse_args(preprocess_input(words))
+        if user_input is None:
+            return
 
         text_before_cursor = document.text_before_cursor
         words = text_before_cursor.strip().split()
@@ -148,42 +156,66 @@ class Command(Completer):
         return f"{command_name:18} {mandatory_params} {optional_params}"
 
 
-class ObservationCommand(Command):
-    pass
+@dataclass
+class ObservationCommandArgs:
+    region: str
+    scope: str
+    back: int
+    species: Optional[str] = None
 
+
+class ObservationCommand(Command):
     scope_arg = str(ArgumentNames.SCOPE.value)
     region_arg = str(ArgumentNames.REGION.value)
     back_arg = str(ArgumentNames.BACK.value)
+    species_arg = str(ArgumentNames.SPECIES.value)
 
     def process_command(self, **kwargs):
         logger.debug(f"process_command - kwargs: {kwargs}")
-
-        region = kwargs[self.region_arg]
-        scope = kwargs[self.scope_arg]
-        days_back = kwargs[self.back_arg]
-
-        self.handle_observations(region, scope, days_back)
+        args = ObservationCommandArgs(
+            region=kwargs[self.region_arg],
+            scope=kwargs[self.scope_arg],
+            back=kwargs[self.back_arg],
+            species=kwargs.get(self.species_arg),
+        )
+        self.handle_observation(args)
 
     def register_arguments(self):
         self.arguments = [RegionScopeArgument(self.location_service),
                           BackArgument()]
 
-    def handle_observations(self, region, scope, back):
+    def handle_observation(self, args: ObservationCommandArgs):
         raise NotImplementedError
 
 
 class RecentCommand(ObservationCommand):
-    def __init__(self, observation_service: ObservationService, location_service: LocationService, printing_service: PrintingService):
+    def __init__(self, observation_service: ObservationService, location_service: LocationService, printing_service: PrintingService, taxonomy_service: TaxonomyService):
+        self.taxonomy_service = taxonomy_service
         super().__init__(observation_service, location_service, printing_service)
 
         self.command_name = "recent"
         self.description = "Retrieve recent observations for the specified region"
 
-    def handle_observations(self, region, scope, back):
-        if scope == RegionalScopes.NEARBY.value:
-            observations = self.observation_service.get_nearby_recent_observations(back)
+    def register_arguments(self):
+        self.arguments = [RegionScopeArgument(self.location_service),
+                          SpeciesArgument(self.taxonomy_service),
+                          BackArgument()]
+
+    def handle_observation(self, args: ObservationCommandArgs):
+        if args.species:
+            species_codes = self.taxonomy_service.get_species_code(args.species)
+            if not species_codes:
+                return
+            species_code = species_codes[0]
+            if args.scope == RegionalScopes.NEARBY.value:
+                observations = self.observation_service.get_nearby_species_observations(species_code, args.back)
+            else:
+                observations = self.observation_service.get_species_observations(self.location_service.get_region_ids_by_scope(args.region, args.scope), species_code, args.back)
         else:
-            observations = self.observation_service.get_recent_observations(self.location_service.get_region_ids_by_scope(region, scope), back)
+            if args.scope == RegionalScopes.NEARBY.value:
+                observations = self.observation_service.get_nearby_recent_observations(args.back)
+            else:
+                observations = self.observation_service.get_recent_observations(self.location_service.get_region_ids_by_scope(args.region, args.scope), args.back)
 
         self.printing_service.print_recent(observations)
 
@@ -195,10 +227,10 @@ class NotableCommand(ObservationCommand):
         self.command_name = "notable"
         self.description = "Retrieve notable observations for the specified region"
 
-    def handle_observations(self, region, scope: str, back):
-        if scope == RegionalScopes.NEARBY.value:
-            observations = self.observation_service.get_nearby_notable_observations(back)
+    def handle_observation(self, args: ObservationCommandArgs):
+        if args.scope == RegionalScopes.NEARBY.value:
+            observations = self.observation_service.get_nearby_notable_observations(args.back)
         else:
-            observations = self.observation_service.get_notable_observations(self.location_service.get_region_ids_by_scope(region, scope), back)
+            observations = self.observation_service.get_notable_observations(self.location_service.get_region_ids_by_scope(args.region, args.scope), args.back)
 
         self.printing_service.print_notable(observations)
