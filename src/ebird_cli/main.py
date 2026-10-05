@@ -1,7 +1,9 @@
 import argparse
 import os
 import re
-
+import ssl
+import urllib.request
+import certifi
 from .services.cache import CacheService
 from .services.location import LocationService
 from .services.printing import PrintingService
@@ -75,6 +77,13 @@ def setup_key_bindings():
             buffer.start_completion(select_first=True)
 
     return bindings
+
+
+def use_certifi_ca_bundle():
+    # ebird-api calls urllib's urlopen, which on Windows only trusts roots already in the Windows store.
+    # Windows downloads roots on demand, so eBird's root may be missing; use certifi's bundle like requests does.
+    context = ssl.create_default_context(cafile=certifi.where())
+    urllib.request.install_opener(urllib.request.build_opener(urllib.request.HTTPSHandler(context=context)))
 
 
 def setup_parser(parser: argparse.ArgumentParser):
@@ -151,6 +160,8 @@ def main():
     life_list = args.life_list or None
     year_list = args.year_list or None
     aggregations = args.aggregations or None
+
+    use_certifi_ca_bundle()
 
     cache_service = CacheService(api_key, locale, Region(region))
     observation_service = ObservationService(api_key, locale, lat, long)
