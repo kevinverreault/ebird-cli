@@ -3,20 +3,22 @@ import os
 import re
 import ssl
 import urllib.request
+
 import certifi
-from .services.cache import CacheService
-from .services.location import LocationService
-from .services.printing import PrintingService
-from .services.observation import ObservationService
-from .services.taxonomy import TaxonomyService
-from .domain.region import Region
-from .cli.command import RecentCommand, NotableCommand
-from .cli.autocomplete import ContextSensitiveCompleter
+from colorama import Fore
 from prompt_toolkit import PromptSession
-from prompt_toolkit.styles import Style
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.keys import Keys
-from colorama import Fore
+from prompt_toolkit.styles import Style
+
+from .cli.autocomplete import ContextSensitiveCompleter
+from .cli.command import NotableCommand, RecentCommand
+from .domain.region import Region
+from .services.cache import CacheService
+from .services.location import LocationService
+from .services.observation import ObservationService
+from .services.printing import PrintingService
+from .services.taxonomy import TaxonomyService
 
 api_key_env_variable = "EBIRDAPIKEY"
 locale_env_variable = "EBIRDLOCALE"
@@ -44,7 +46,7 @@ def print_menu(commands, args=None):
 
     for value in commands.values():
         examples.append(value.command_example())
-    formatted_examples = '\n    '.join(f"{item}" for item in examples)
+    formatted_examples = "\n    ".join(f"{item}" for item in examples)
 
     args_section = ""
     if args is not None:
@@ -98,7 +100,10 @@ def setup_parser(parser: argparse.ArgumentParser):
         "--region",
         default=os.getenv(default_region_env_variable),
         required=os.getenv(default_region_env_variable) is None,
-        help=f"eBird subnational level 2 region code is mandatory if {default_region_env_variable} env variable is not set",
+        help=(
+            "eBird subnational level 2 region code is mandatory if "
+            f"{default_region_env_variable} env variable is not set"
+        ),
         type=regex_type(region_regex),
     )
 
@@ -169,17 +174,22 @@ def main():
     location_service = LocationService(cache_service.location_cache, aggregations)
     taxonomy_service = TaxonomyService(cache_service.taxonomy_cache)
 
-    commands = {command.command_name: command for command in [
-        RecentCommand(observation_service, location_service, printing_service, taxonomy_service),
-        NotableCommand(observation_service, location_service, printing_service),
-    ]}
+    commands = {
+        command.command_name: command
+        for command in [
+            RecentCommand(observation_service, location_service, printing_service, taxonomy_service),
+            NotableCommand(observation_service, location_service, printing_service),
+        ]
+    }
 
-    style = Style.from_dict({
-        'prompt': 'ansigreen bold',
-        '': 'ansiwhite',
-        'completion-menu.completion': 'bg:#008888 #ffffff',
-        'completion-menu.completion.current': 'bg:#00aaaa #000000',
-    })
+    style = Style.from_dict(
+        {
+            "prompt": "ansigreen bold",
+            "": "ansiwhite",
+            "completion-menu.completion": "bg:#008888 #ffffff",
+            "completion-menu.completion.current": "bg:#00aaaa #000000",
+        }
+    )
 
     print_menu(commands, args)
     session = PromptSession(completer=ContextSensitiveCompleter(commands.values()), key_bindings=setup_key_bindings())

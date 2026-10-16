@@ -8,8 +8,8 @@ class CliArgumentParser:
         self.flag_args = []
 
     def add_positional_argument(self, *args, **kwargs):
-        if 'choices' in kwargs:
-            self.positional_args.extend(kwargs['choices'])
+        if "choices" in kwargs:
+            self.positional_args.extend(kwargs["choices"])
         self.parser.add_argument(*args, **kwargs)
 
     def add_flag_argument(self, *args, **kwargs):

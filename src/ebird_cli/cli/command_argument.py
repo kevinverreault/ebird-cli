@@ -1,11 +1,13 @@
-from enum import Enum
-from typing import Generator
 from abc import ABC, abstractmethod
+from collections.abc import Generator
+from enum import Enum
+
 from prompt_toolkit.completion import Completion
-from .argument_parser import CliArgumentParser
-from .input_processing import flag_arg_name, FLAG
+
 from ..domain.regional_scopes import RegionalScopes
 from ..services import LocationService, TaxonomyService
+from .argument_parser import CliArgumentParser
+from .input_processing import FLAG, flag_arg_name
 
 
 class ArgumentNames(Enum):
@@ -60,8 +62,10 @@ class RegionScopeArgument(CommandArgument):
             yield Completion(completion, start_position=start_position)
 
     def setup_parser(self, parser: CliArgumentParser):
-        parser.add_positional_argument(self.scope_arg, type=str, choices=[scope.value for scope in RegionalScopes], help='Regional scope')
-        parser.add_flag_argument(flag_arg_name(self.region_arg), type=str, required=False, help='Region code')
+        parser.add_positional_argument(
+            self.scope_arg, type=str, choices=[scope.value for scope in RegionalScopes], help="Regional scope"
+        )
+        parser.add_flag_argument(flag_arg_name(self.region_arg), type=str, required=False, help="Region code")
 
     def get_mandatory_arguments(self):
         return [self.scope_arg]
@@ -86,11 +90,17 @@ class RegionScopeArgument(CommandArgument):
 
     def get_region_completions(self, scope, region) -> list:
         if scope == RegionalScopes.SUBNATIONAL.value:
-            return self.location_service.get_subnationals() if region == "" else self.location_service.search_subnationals(region)
+            return (
+                self.location_service.get_subnationals()
+                if region == ""
+                else self.location_service.search_subnationals(region)
+            )
         elif scope == RegionalScopes.REGIONAL.value:
             return self.location_service.get_regions() if region == "" else self.location_service.search_regions(region)
         elif scope == RegionalScopes.HOTSPOT.value:
-            return self.location_service.get_hotspots() if region == "" else self.location_service.search_hotspots(region)
+            return (
+                self.location_service.get_hotspots() if region == "" else self.location_service.search_hotspots(region)
+            )
         else:
             return []
 
