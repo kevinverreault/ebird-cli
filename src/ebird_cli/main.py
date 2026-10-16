@@ -188,33 +188,42 @@ def main():
         try:
             print("")
             user_input = session.prompt("⋙  ", style=style)
-            if user_input.lower() == "exit" or user_input.lower() == "e":
-                print("Exiting eBird CLI.")
+            if not handle_input(user_input, commands, args):
                 break
-
-            if user_input == "":
-                print_menu(commands, args)
-                continue
-
-            args = user_input.split()
-            if not args:
-                continue
-
-            command_name, *command_args = args
-            user_request = commands.get(command_name)
-
-            if user_request:
-                user_request.handle_command(*command_args)
-            else:
-                print("Unknown command.")
         except KeyboardInterrupt:
             continue
         except EOFError:
             break
-        except argparse.ArgumentError as e:
-            print(f"Invalid argument: {e.message}")
-        except Exception as e:
-            print(f"An error occurred: {e}")
+
+
+def handle_input(user_input: str, commands, program_args) -> bool:
+    """Run one line typed at the prompt. Returns whether the session should continue."""
+    try:
+        if user_input.lower() == "exit" or user_input.lower() == "e":
+            print("Exiting eBird CLI.")
+            return False
+
+        if user_input == "":
+            print_menu(commands, program_args)
+            return True
+
+        words = user_input.split()
+        if not words:
+            return True
+
+        command_name, *command_args = words
+        user_request = commands.get(command_name)
+
+        if user_request:
+            user_request.handle_command(*command_args)
+        else:
+            print("Unknown command.")
+    except argparse.ArgumentError as e:
+        print(f"Invalid argument: {e.message}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+    return True
 
 
 if __name__ == "__main__":

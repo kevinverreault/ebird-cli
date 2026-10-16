@@ -167,10 +167,29 @@ Cached data is written once and reused on every subsequent launch. To force a re
    - On Windows: `venv\Scripts\activate`
    - On macOS/Linux: `source venv/bin/activate`
 
-2. Install dependencies:
+2. Install dependencies (`requirements-dev.txt` adds the test tools to the runtime dependencies):
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements-dev.txt
    ```
+
+### Tests
+
+The test suite runs offline: it never calls the eBird API, needs no API key and never touches your user cache directory.
+
+```bash
+python -m pytest
+```
+
+Tests live in `tests/`, mirroring the source layout:
+
+- `tests/cli/`: the `recent` and `notable` commands and autocompletion, driven through their public entry points
+- `tests/services/`, `tests/domain/`: cache, location and taxonomy services and domain value parsing
+- `tests/test_prompt_dispatch.py`, `tests/test_program_arguments.py`: prompt input handling and program arguments
+- `tests/conftest.py`: shared fixtures, including `make_cli`, which wires real services and commands the way `main` does
+- `tests/fakes.py`: the in-memory fake eBird client, the only test double
+- `tests/fixtures/`: small hand-written cache, list and aggregation files for the `CA-QC-MR` region
+
+Tests named `..._currently_...` pin behaviour that looks accidental, so changing it is a deliberate test change.
 
 ## Credits
 
