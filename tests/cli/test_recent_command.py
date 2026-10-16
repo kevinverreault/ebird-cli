@@ -79,9 +79,7 @@ def test_recent_without_region_uses_the_default_region_for_the_scope(cli, scope,
 def test_recent_species_looks_up_the_species_code_and_requests_species_observations(cli):
     cli.run("recent regional -region Montréal -species Harfang des neiges")
 
-    assert cli.client.calls == [
-        Call("get_species_observations", ("snoowl1", ["CA-QC-MO"]), back="7", hotspot=True)
-    ]
+    assert cli.client.calls == [Call("get_species_observations", ("snoowl1", ["CA-QC-MO"]), back="7", hotspot=True)]
 
 
 def test_recent_species_accepts_flags_in_any_order(cli):
@@ -132,12 +130,16 @@ def test_recent_currently_raises_on_non_numeric_back(cli):
 
 
 def test_recent_keeps_only_the_latest_observation_per_species_oldest_first(make_cli, capsys):
-    cli = make_cli(FakeEbirdClient(get_observations=[
-        observation("Geai bleu", "2026-10-15 09:00", loc_name="Parc national de la Mauricie"),
-        observation("Canard colvert", "2026-10-12", loc_name="Parc de l'Île-Saint-Quentin"),
-        observation("Geai bleu", "2026-10-13 07:30", loc_name="Parc de l'Île-Saint-Quentin"),
-        observation("Harfang des neiges", "2026-10-14 16:45", loc_name="Aéroport de Trois-Rivières"),
-    ]))
+    cli = make_cli(
+        FakeEbirdClient(
+            get_observations=[
+                observation("Geai bleu", "2026-10-15 09:00", loc_name="Parc national de la Mauricie"),
+                observation("Canard colvert", "2026-10-12", loc_name="Parc de l'Île-Saint-Quentin"),
+                observation("Geai bleu", "2026-10-13 07:30", loc_name="Parc de l'Île-Saint-Quentin"),
+                observation("Harfang des neiges", "2026-10-14 16:45", loc_name="Aéroport de Trois-Rivières"),
+            ]
+        )
+    )
 
     cli.run("recent regional")
 
@@ -149,11 +151,15 @@ def test_recent_keeps_only_the_latest_observation_per_species_oldest_first(make_
 
 
 def test_recent_species_keeps_only_the_latest_observation_per_location_oldest_first(make_cli, capsys):
-    cli = make_cli(FakeEbirdClient(get_species_observations=[
-        observation("Harfang des neiges", "2026-10-15 08:00", loc_name="Aéroport de Trois-Rivières"),
-        observation("Harfang des neiges", "2026-10-11", loc_name="Parc de l'Île-Saint-Quentin"),
-        observation("Harfang des neiges", "2026-10-13 12:00", loc_name="Aéroport de Trois-Rivières"),
-    ]))
+    cli = make_cli(
+        FakeEbirdClient(
+            get_species_observations=[
+                observation("Harfang des neiges", "2026-10-15 08:00", loc_name="Aéroport de Trois-Rivières"),
+                observation("Harfang des neiges", "2026-10-11", loc_name="Parc de l'Île-Saint-Quentin"),
+                observation("Harfang des neiges", "2026-10-13 12:00", loc_name="Aéroport de Trois-Rivières"),
+            ]
+        )
+    )
 
     cli.run("recent regional -species Harfang des neiges")
 
@@ -161,4 +167,3 @@ def test_recent_species_keeps_only_the_latest_observation_per_location_oldest_fi
         ["2026-10-11", "Harfang des neiges", "Parc de l'Île-Saint-Quentin"],
         ["2026-10-15", "Harfang des neiges", "Aéroport de Trois-Rivières"],
     ]
-

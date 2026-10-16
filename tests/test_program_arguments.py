@@ -31,14 +31,22 @@ def parse(*argv):
 
 def test_reads_every_option_from_flags():
     args = parse(
-        "--api-key", "flag-key",
-        "--region", "CA-QC-MR",
-        "--locale", "en",
-        "--lat", "46.35",
-        "--long", "-72.55",
-        "--year-list", "year.csv",
-        "--life-list", "life.csv",
-        "--aggregations", "aggregations.json",
+        "--api-key",
+        "flag-key",
+        "--region",
+        "CA-QC-MR",
+        "--locale",
+        "en",
+        "--lat",
+        "46.35",
+        "--long",
+        "-72.55",
+        "--year-list",
+        "year.csv",
+        "--life-list",
+        "life.csv",
+        "--aggregations",
+        "aggregations.json",
     )
 
     assert vars(args) == {

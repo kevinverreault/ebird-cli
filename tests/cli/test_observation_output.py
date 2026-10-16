@@ -38,9 +38,12 @@ def test_no_observations_prints_an_empty_table_and_zero_total(cli, capsys):
 
 
 def test_location_and_names_are_cleaned_for_display(make_cli, capsys):
-    cli = recent_cli(make_cli, [
-        observation("Canard colvert (Domestique)", "2026-10-12", loc_name="Étang Hertel, Montréal, QC"),
-    ])
+    cli = recent_cli(
+        make_cli,
+        [
+            observation("Canard colvert (Domestique)", "2026-10-12", loc_name="Étang Hertel, Montréal, QC"),
+        ],
+    )
 
     cli.run("recent regional")
 
@@ -48,10 +51,13 @@ def test_location_and_names_are_cleaned_for_display(make_cli, capsys):
 
 
 def test_region_column_appears_when_observations_span_several_regions(make_cli, capsys):
-    cli = recent_cli(make_cli, [
-        observation("Canard colvert", "2026-10-12", subnational2_name="Mauricie"),
-        observation("Geai bleu", "2026-10-13", subnational2_name="Montréal"),
-    ])
+    cli = recent_cli(
+        make_cli,
+        [
+            observation("Canard colvert", "2026-10-12", subnational2_name="Mauricie"),
+            observation("Geai bleu", "2026-10-13", subnational2_name="Montréal"),
+        ],
+    )
 
     cli.run("recent subnational")
 
@@ -72,10 +78,12 @@ def test_region_column_is_hidden_when_observations_are_in_one_region(make_cli, c
 
 
 def test_notable_output_matches_recent_output(make_cli, capsys):
-    cli = make_cli(FakeEbirdClient(
-        get_observations=MAURICIE_OBSERVATIONS,
-        get_notable_observations=MAURICIE_OBSERVATIONS,
-    ))
+    cli = make_cli(
+        FakeEbirdClient(
+            get_observations=MAURICIE_OBSERVATIONS,
+            get_notable_observations=MAURICIE_OBSERVATIONS,
+        )
+    )
 
     cli.run("recent regional")
     recent_output = capsys.readouterr().out

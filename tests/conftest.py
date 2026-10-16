@@ -99,10 +99,13 @@ def make_cli(tmp_path):
         location_service = LocationService(cache_service.location_cache, aggregations)
         taxonomy_service = TaxonomyService(cache_service.taxonomy_cache)
 
-        commands = {command.command_name: command for command in [
-            RecentCommand(observation_service, location_service, printing_service, taxonomy_service),
-            NotableCommand(observation_service, location_service, printing_service),
-        ]}
+        commands = {
+            command.command_name: command
+            for command in [
+                RecentCommand(observation_service, location_service, printing_service, taxonomy_service),
+                NotableCommand(observation_service, location_service, printing_service),
+            ]
+        }
         return Cli(client, commands, ContextSensitiveCompleter(commands.values()), location_service, taxonomy_service)
 
     return make

@@ -39,12 +39,16 @@ def test_notable_currently_fails_to_parse_a_species_flag(cli):
 
 
 def test_notable_keeps_the_first_observation_per_location_and_species_oldest_first(make_cli, capsys):
-    cli = make_cli(FakeEbirdClient(get_notable_observations=[
-        observation("Harfang des neiges", "2026-10-15 08:00", loc_name="Aéroport de Trois-Rivières"),
-        observation("Pygargue à tête blanche", "2026-10-12", loc_name="Parc de l'Île-Saint-Quentin"),
-        observation("Harfang des neiges", "2026-10-16 09:30", loc_name="Aéroport de Trois-Rivières"),
-        observation("Harfang des neiges", "2026-10-11 10:00", loc_name="Parc de l'Île-Saint-Quentin"),
-    ]))
+    cli = make_cli(
+        FakeEbirdClient(
+            get_notable_observations=[
+                observation("Harfang des neiges", "2026-10-15 08:00", loc_name="Aéroport de Trois-Rivières"),
+                observation("Pygargue à tête blanche", "2026-10-12", loc_name="Parc de l'Île-Saint-Quentin"),
+                observation("Harfang des neiges", "2026-10-16 09:30", loc_name="Aéroport de Trois-Rivières"),
+                observation("Harfang des neiges", "2026-10-11 10:00", loc_name="Parc de l'Île-Saint-Quentin"),
+            ]
+        )
+    )
 
     cli.run("notable regional")
 

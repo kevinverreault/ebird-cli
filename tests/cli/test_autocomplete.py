@@ -66,8 +66,10 @@ def test_region_flag_is_hidden_after_nearby_scope(cli, text, expected):
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        ("recent subnational -region ",
-         ["Alberta", "Colombie-Britannique", "Nouveau-Brunswick", "Nouvelle-Écosse", "Ontario", "Québec"]),
+        (
+            "recent subnational -region ",
+            ["Alberta", "Colombie-Britannique", "Nouveau-Brunswick", "Nouvelle-Écosse", "Ontario", "Québec"],
+        ),
         ("recent subnational -region NOU", ["Nouveau-Brunswick", "Nouvelle-Écosse"]),
         ("recent regional -region ", ["Côte-Nord", "Montérégie", "Montréal", "Mauricie"]),
         ("notable regional -region mont", ["Montérégie", "Montréal"]),
