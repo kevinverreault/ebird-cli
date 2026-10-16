@@ -40,10 +40,7 @@ class Command(Completer):
         raise NotImplementedError
 
     def arg_is_multi_word(self, arg_name):
-        for argument in self.arguments:
-            if argument.arg_is_multi_word(arg_name):
-                return True
-        return False
+        return any(argument.arg_is_multi_word(arg_name) for argument in self.arguments)
 
     def handle_command(self, *args):
         processed_input = preprocess_input(" ".join(args).split())
@@ -92,7 +89,7 @@ class Command(Completer):
             else:
                 yield from self.get_flag_value_completions(words, document)
         except argparse.ArgumentError as e:
-            raise e.with_traceback(None)
+            raise e.with_traceback(None) from None
 
     def get_flag_arg_completions(self, document, complete_event, words) -> Generator:
         flag_count = len([s for s in words if s.startswith(FLAG)])

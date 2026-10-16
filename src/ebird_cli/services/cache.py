@@ -64,7 +64,7 @@ class CacheService:
 
     def write_csv(self, file_path, data):
         with open(file_path, mode="w", newline="", encoding="utf-8") as csvfile:
-            fieldnames = list(dict.fromkeys(k for row in data for k in row.keys()))
+            fieldnames = list(dict.fromkeys(k for row in data for k in row))
             writer = csv.DictWriter(
                 csvfile,
                 fieldnames=fieldnames,
