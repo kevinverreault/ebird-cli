@@ -6,7 +6,9 @@ exit_program = "exit"
 
 class ContextSensitiveCompleter(Completer):
     def __init__(self, commands):
-        self.first_word_completer = WordCompleter([cmd.command_name for cmd in commands] + [exit_program], ignore_case=True)
+        self.first_word_completer = WordCompleter(
+            [cmd.command_name for cmd in commands] + [exit_program], ignore_case=True
+        )
         self.command_completers = {cmd.command_name: cmd for cmd in commands}
 
     def get_completions(self, document: Document, complete_event):
@@ -14,7 +16,10 @@ class ContextSensitiveCompleter(Completer):
         words = text.split(" ")
         if not words or (len(words) == 1 and not text.endswith(" ")):
             for completion in self.first_word_completer.get_completions(document, complete_event):
-                yield Completion(completion.text if completion.text == exit_program else completion.text + '', start_position=completion.start_position)
+                yield Completion(
+                    completion.text if completion.text == exit_program else completion.text + "",
+                    start_position=completion.start_position,
+                )
         else:
             command_name = words[0]
             command = self.command_completers.get(command_name)

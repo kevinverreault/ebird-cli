@@ -1,6 +1,7 @@
-from datetime import datetime
-from .fields import EbirdFields
 import re
+from datetime import datetime
+
+from .fields import EbirdFields
 
 regex_filter = r"\([^)]*\)"
 
@@ -8,7 +9,7 @@ datetime_format = "%Y-%m-%d %H:%M"
 date_format = "%Y-%m-%d"
 
 
-class Observation(object):
+class Observation:
     def __init__(self, observation):
         self.observation_date = observation[EbirdFields.observation_date][0:10]
         if len(observation[EbirdFields.observation_date]) > 10:
@@ -17,4 +18,8 @@ class Observation(object):
             self.observation_datetime = datetime.strptime(observation[EbirdFields.observation_date], date_format)
         self.location = re.sub(regex_filter, "", observation[EbirdFields.location_name]).split(",")[0][0:55]
         self.name = re.sub(regex_filter, "", observation[EbirdFields.common_name]).strip()
-        self.subname = observation[EbirdFields.sub_subnational_name] if EbirdFields.sub_subnational_name in observation.keys() else ""
+        self.subname = (
+            observation[EbirdFields.sub_subnational_name]
+            if EbirdFields.sub_subnational_name in observation.keys()
+            else ""
+        )
