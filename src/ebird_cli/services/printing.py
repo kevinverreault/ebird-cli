@@ -6,10 +6,10 @@ from .dataframe import DataFrameService
 
 
 class PrintingService(DataFrameService):
-    def __init__(self, life_list: str | None, year_list: str | None):
+    def __init__(self, life_list: str | None, year_list: str | None, console: Console | None = None):
         self.life_list = self.get_dataframe(life_list) if life_list else None
         self.year_list = self.get_dataframe(year_list) if year_list else None
-        self.console = Console()
+        self.console = console or Console()
 
     def print_notable(self, notable_observations: list):
         self.print_observations(notable_observations, lambda obs: obs.location)

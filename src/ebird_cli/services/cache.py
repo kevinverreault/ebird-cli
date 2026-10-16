@@ -2,44 +2,40 @@ import csv
 import os
 
 import pandas as pd
-import requests
 from appdirs import user_cache_dir
-from ebird.api import Client
 
 from ..domain.fields import EbirdFields
 from ..domain.location_cache import LocationCache
 from ..domain.region import Region
 from ..domain.taxonomy_cache import TaxonomyCache
+from .ebird_client import EbirdClient
 
-CACHE_DIR = user_cache_dir("ebird_cli")
 LOCATION_DIR = "location"
 TAXONOMY_DIR = "taxonomy"
 
-os.makedirs(CACHE_DIR, exist_ok=True)
-
 
 class CacheService:
-    def __init__(self, api_key: str, locale: str, region: Region):
-        self.api_client = Client(api_key, locale)
-        self.api_client.detail = "full"
+    def __init__(self, api_key: str, locale: str, region: Region, api_client=None, cache_dir: str | None = None):
+        self.api_client = api_client or EbirdClient(api_key, locale)
+        self.cache_dir = cache_dir or user_cache_dir("ebird_cli")
 
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        os.makedirs(os.path.join(CACHE_DIR, LOCATION_DIR, region.national), exist_ok=True)
+        os.makedirs(self.cache_dir, exist_ok=True)
+        os.makedirs(os.path.join(self.cache_dir, LOCATION_DIR, region.national), exist_ok=True)
         os.makedirs(
-            os.path.join(CACHE_DIR, LOCATION_DIR, region.national, region.subnational),
+            os.path.join(self.cache_dir, LOCATION_DIR, region.national, region.subnational),
             exist_ok=True,
         )
 
-        national_subregions_path = os.path.join(CACHE_DIR, LOCATION_DIR, region.national, "subregions.csv")
+        national_subregions_path = os.path.join(self.cache_dir, LOCATION_DIR, region.national, "subregions.csv")
         subnational_subregions_path = os.path.join(
-            CACHE_DIR,
+            self.cache_dir,
             LOCATION_DIR,
             region.national,
             region.subnational,
             "subregions.csv",
         )
         subnational_hotspots_path = os.path.join(
-            CACHE_DIR, LOCATION_DIR, region.national, region.subnational, "hotspots.csv"
+            self.cache_dir, LOCATION_DIR, region.national, region.subnational, "hotspots.csv"
         )
 
         if not os.path.exists(national_subregions_path):
@@ -52,7 +48,7 @@ class CacheService:
             self.write_csv(subnational_subregions_path, subregionals)
             self.write_csv(subnational_hotspots_path, hotspots)
 
-        national_taxonomy_path = self.get_taxonomy(api_key, locale, region)
+        national_taxonomy_path = self.get_taxonomy(region)
 
         self.taxonomy_cache = TaxonomyCache(region, national_taxonomy_path)
         self.location_cache = LocationCache(
@@ -75,36 +71,21 @@ class CacheService:
             writer.writeheader()
             writer.writerows(data)
 
-    def get_taxonomy(self, api_key: str, locale: str, region: Region) -> str:
-        taxonomy_path = os.path.join(CACHE_DIR, TAXONOMY_DIR, "taxonomy.csv")
-        national_taxonomy_path = os.path.join(CACHE_DIR, TAXONOMY_DIR, region.national, "taxonomy.csv")
+    def get_taxonomy(self, region: Region) -> str:
+        taxonomy_path = os.path.join(self.cache_dir, TAXONOMY_DIR, "taxonomy.csv")
+        national_taxonomy_path = os.path.join(self.cache_dir, TAXONOMY_DIR, region.national, "taxonomy.csv")
 
         if not os.path.exists(taxonomy_path):
-            taxonomy = self.fetch_taxonomy(api_key, locale)
+            taxonomy = self.api_client.get_ebird_taxonomy()
             os.makedirs(os.path.dirname(taxonomy_path), exist_ok=True)
             self.write_csv(taxonomy_path, taxonomy)
 
         taxonomy_df = pd.read_csv(taxonomy_path)
 
         if not os.path.exists(national_taxonomy_path):
-            national_species = self.get_national_species(api_key, region)
+            national_species = self.api_client.get_national_species(region.national)
             national_taxonomy_df = taxonomy_df[taxonomy_df[EbirdFields.species_code].isin(national_species)]
             os.makedirs(os.path.dirname(national_taxonomy_path), exist_ok=True)
             national_taxonomy_df.to_csv(national_taxonomy_path, index=False)
 
         return national_taxonomy_path
-
-    def fetch_taxonomy(self, api_key: str, locale: str) -> list[dict]:
-        url = "https://api.ebird.org/v2/ref/taxonomy/ebird"
-        headers = {"X-eBirdApiToken": api_key}
-        params = {"fmt": "json", "locale": locale}
-        response = requests.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        return response.json()
-
-    def get_national_species(self, api_key: str, region: Region) -> list[str]:
-        url = f"https://api.ebird.org/v2/product/spplist/{region.national}"
-        headers = {"X-eBirdApiToken": api_key}
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        return response.json()

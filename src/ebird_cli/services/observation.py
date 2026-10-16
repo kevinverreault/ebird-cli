@@ -1,16 +1,14 @@
 from itertools import chain
 
-from ebird.api import Client
-
 from ..domain import Observation
+from .ebird_client import EbirdClient
 
 
 class ObservationService:
     DEFAULT_DAYS = 7
 
-    def __init__(self, api_key, locale, lat, long):
-        self.api_client = Client(api_key, locale)
-        self.api_client.detail = "full"
+    def __init__(self, api_key, locale, lat, long, api_client=None):
+        self.api_client = api_client or EbirdClient(api_key, locale)
         self.lat = lat
         self.long = long
 
