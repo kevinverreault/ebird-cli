@@ -1,6 +1,6 @@
-from .dataframe import DataFrameService
 from ..domain.fields import EbirdFields
 from ..domain.taxonomy_cache import TaxonomyCache
+from .dataframe import DataFrameService
 
 
 class TaxonomyService(DataFrameService):

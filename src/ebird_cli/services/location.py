@@ -1,10 +1,12 @@
 import json
 import os
+
 import pandas
-from .dataframe import DataFrameService
+
 from ..domain.fields import EbirdFields
-from ..domain.regional_scopes import RegionalScopes
 from ..domain.location_cache import LocationCache
+from ..domain.regional_scopes import RegionalScopes
+from .dataframe import DataFrameService
 
 
 class LocationService(DataFrameService):
@@ -16,7 +18,7 @@ class LocationService(DataFrameService):
         if aggregations_file:
             agg_file = os.path.expanduser(aggregations_file)
             if os.path.isfile(agg_file):
-                with open(agg_file, "r", encoding="utf-8") as file:
+                with open(agg_file, encoding="utf-8") as file:
                     aggregations = json.load(file)
                     self.aggregations = {}
                     for aggregation in aggregations:
@@ -42,19 +44,27 @@ class LocationService(DataFrameService):
         return self.location_cache.subnationals[EbirdFields.name].to_list()
 
     def search_subnationals(self, region_name: str) -> list:
-        return self.get_column(self.search_by(self.location_cache.subnationals, EbirdFields.name, region_name), EbirdFields.name)
+        return self.get_column(
+            self.search_by(self.location_cache.subnationals, EbirdFields.name, region_name), EbirdFields.name
+        )
 
     def get_subnational_id(self, subnational_name):
-        return self.get_column(self.search_by(self.location_cache.subnationals, EbirdFields.name, subnational_name), EbirdFields.code)
+        return self.get_column(
+            self.search_by(self.location_cache.subnationals, EbirdFields.name, subnational_name), EbirdFields.code
+        )
 
     def get_regions(self) -> list:
         return self.location_cache.subregionals[EbirdFields.name].to_list()
 
     def search_regions(self, region_name: str) -> list:
-        return self.get_column(self.search_by(self.location_cache.subregionals, EbirdFields.name, region_name), EbirdFields.name)
+        return self.get_column(
+            self.search_by(self.location_cache.subregionals, EbirdFields.name, region_name), EbirdFields.name
+        )
 
     def get_region_id(self, region_name: str) -> list:
-        return self.get_column(self.search_by(self.location_cache.subregionals, EbirdFields.name, region_name), EbirdFields.code)
+        return self.get_column(
+            self.search_by(self.location_cache.subregionals, EbirdFields.name, region_name), EbirdFields.code
+        )
 
     def get_hotspots(self) -> list:
         return self.location_cache.hotspots[EbirdFields.location_name].to_list() + self.get_aggregations()
@@ -92,4 +102,8 @@ class LocationService(DataFrameService):
         return regions
 
     def get_default_by_scope(self, scope: RegionalScopes):
-        return self.location_cache.region.subnational if scope == RegionalScopes.SUBNATIONAL.value else self.location_cache.region.regional
+        return (
+            self.location_cache.region.subnational
+            if scope == RegionalScopes.SUBNATIONAL.value
+            else self.location_cache.region.regional
+        )

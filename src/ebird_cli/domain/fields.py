@@ -18,4 +18,3 @@ class EbirdFields(StrEnum):
 
 class ExportFields(StrEnum):
     common_name = "Common Name"
-

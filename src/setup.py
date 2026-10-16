@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="ebird_cli",
@@ -6,8 +6,8 @@ setup(
     packages=find_packages(),
     install_requires=[],
     entry_points={
-        'console_scripts': [
-            'ebird_cli=ebird_cli.main:main',
+        "console_scripts": [
+            "ebird_cli=ebird_cli.main:main",
         ],
     },
     author="Kevin Verreault",

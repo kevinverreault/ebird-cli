@@ -53,9 +53,7 @@ class ObservationService:
     def get_recent_observations(self, locations: list, back=DEFAULT_DAYS) -> list:
         self.configure_client(back)
 
-        locs = list(set(
-            chain.from_iterable(item if isinstance(item, list) else [item] for item in locations)
-        ))
+        locs = list(set(chain.from_iterable(item if isinstance(item, list) else [item] for item in locations)))
         observations = self.api_client.get_observations(locs)
 
         return self.get_observations_from_recent(observations)
@@ -63,9 +61,7 @@ class ObservationService:
     def get_species_observations(self, locations: list, species_code: str, back=DEFAULT_DAYS) -> list:
         self.configure_client(back)
 
-        locs = list(set(
-            chain.from_iterable(item if isinstance(item, list) else [item] for item in locations)
-        ))
+        locs = list(set(chain.from_iterable(item if isinstance(item, list) else [item] for item in locations)))
         observations = self.api_client.get_species_observations(species_code, locs)
 
         return self.get_observations_from_species(observations)
@@ -90,7 +86,7 @@ class ObservationService:
         unique = dict()
         for obsJson in observations:
             obs = Observation(obsJson)
-            if obs.name not in unique.keys() or unique[obs.name].observation_datetime < obs.observation_datetime:
+            if obs.name not in unique or unique[obs.name].observation_datetime < obs.observation_datetime:
                 unique[obs.name] = obs
 
         return sorted(unique.values(), key=lambda x: x.observation_datetime)

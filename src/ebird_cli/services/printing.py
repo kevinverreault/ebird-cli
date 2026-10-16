@@ -1,7 +1,8 @@
-from .dataframe import DataFrameService
-from ..domain.fields import ExportFields
 from rich.console import Console, Text
 from rich.table import Table
+
+from ..domain.fields import ExportFields
+from .dataframe import DataFrameService
 
 
 class PrintingService(DataFrameService):
@@ -19,15 +20,15 @@ class PrintingService(DataFrameService):
     def print_observations(self, observations, location):
         table = Table()
 
-        table.add_column('Date', style='magenta')
-        table.add_column('Observation')
-        table.add_column('Location')
+        table.add_column("Date", style="magenta")
+        table.add_column("Observation")
+        table.add_column("Location")
 
         regions = {obs.subname for obs in observations}
         show_region = len(regions) > 1
 
         if show_region:
-            table.add_column('Region')
+            table.add_column("Region")
 
         for observation in observations:
             row = (observation.observation_date, self.get_observation_text(observation), location(observation))
@@ -49,11 +50,10 @@ class PrintingService(DataFrameService):
             is_life_target = not (self.life_list[ExportFields.common_name] == observation.name).any()
 
         if is_life_target:
-            style = 'red'
+            style = "red"
         elif is_year_target:
-            style = 'green'
+            style = "green"
         else:
-            style = 'white'
+            style = "white"
 
         return Text(observation.name, style)
-

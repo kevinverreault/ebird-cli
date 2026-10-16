@@ -1,4 +1,5 @@
 import pandas
+
 from ..domain.region import Region
 
 
