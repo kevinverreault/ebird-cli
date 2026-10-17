@@ -154,10 +154,10 @@ To avoid redundant API calls to eBird, the CLI caches reference data locally on 
 
 The following data is cached:
 
-- **Location data** (per region): subnational level 1 regions, subnational level 2 regions, and hotspots — stored as CSV files under `location/<national>/<subnational>/`
+- **Location data** (per region): subnational level 1 regions, subnational level 2 regions, and every hotspot in the subnational region — stored as JSON files under `location/<national>/` and `location/<national>/<subnational>/`
 - **Taxonomy** (per locale and national region): the full eBird taxonomy filtered to species observed in the configured country — stored as CSV files under `taxonomy/<national>/`
 
-Cached data is written once and reused on every subsequent launch. To force a refresh (e.g. after a new eBird taxonomy release or a region change), delete the relevant files or the entire cache directory.
+Hotspots are fetched again on launch once their cached file is more than 30 days old, so new hotspots appear; if eBird can't be reached, the older file is used. All other cached data is written once and reused on every subsequent launch. To force a refresh (e.g. after a new eBird taxonomy release or a region change), delete the relevant files or the entire cache directory.
 
 ## Development setup
 

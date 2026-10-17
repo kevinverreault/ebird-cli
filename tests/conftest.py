@@ -28,6 +28,11 @@ ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 ANSI_COLORS = {"31": "red", "32": "green", "37": "white"}
 
 
+def copy_fixture_cache(cache_dir: Path):
+    """Copy the fixture cache into cache_dir as if just written, so no cached file has expired."""
+    shutil.copytree(FIXTURES / "cache", cache_dir, dirs_exist_ok=True, copy_function=shutil.copy)
+
+
 @pytest.fixture(autouse=True)
 def offline_and_isolated(monkeypatch):
     """Fail loudly if a test would reach the real eBird API or the real user cache directory."""
@@ -88,7 +93,7 @@ def make_cli(tmp_path):
     def make(client=None, aggregations=None, year_list=None, life_list=None, lat=LAT, long=LONG) -> Cli:
         client = client or FakeEbirdClient()
         cache_dir = tmp_path / "cache"
-        shutil.copytree(FIXTURES / "cache", cache_dir, dirs_exist_ok=True)
+        copy_fixture_cache(cache_dir)
 
         cache_service = CacheService("api-key", "fr", Region(REGION), api_client=client, cache_dir=str(cache_dir))
         console = Console(force_terminal=True, color_system="standard", width=200, legacy_windows=False)

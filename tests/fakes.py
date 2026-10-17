@@ -29,8 +29,8 @@ class FakeEbirdClient:
     def get_regions(self, rtype, region):
         return self._respond("get_regions", rtype, region)
 
-    def get_hotspots(self, region):
-        return self._respond("get_hotspots", region)
+    def get_hotspots(self, region, back=14):
+        return self._respond("get_hotspots", region, back=back)
 
     def get_ebird_taxonomy(self):
         return self._respond("get_ebird_taxonomy")

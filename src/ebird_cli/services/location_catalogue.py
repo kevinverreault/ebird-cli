@@ -1,21 +1,46 @@
 import json
 import os
+import time
 from collections.abc import Callable
+from datetime import timedelta
+from urllib.error import HTTPError
 
 from ..domain.fields import EbirdFields
 from ..domain.region import Region
 from ..domain.regional_scopes import RegionalScopes
 
 LOCATION_DIR = "location"
+# Hotspots are created all the time; Regions practically never change, so their files don't expire.
+HOTSPOTS_MAX_AGE = timedelta(days=30)
 
 
-def cached(file_path: str, fetch: Callable[[], list[dict]]) -> list[dict]:
-    """The eBird response cached at file_path, fetched and stored verbatim first if it isn't there."""
+def is_fresh(file_path: str, max_age: timedelta | None) -> bool:
+    """Whether the file exists and, given a max age, was written no longer ago than that."""
     if not os.path.exists(file_path):
-        response = fetch()
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        with open(file_path, "w", encoding="utf-8") as file:
-            json.dump(response, file, ensure_ascii=False, indent=2)
+        return False
+    return max_age is None or time.time() - os.path.getmtime(file_path) <= max_age.total_seconds()
+
+
+def cached(file_path: str, fetch: Callable[[], list[dict]], max_age: timedelta | None = None) -> list[dict]:
+    """The eBird response cached at file_path, fetched and stored verbatim first if it isn't there or is too old.
+
+    A file that is too old is still used when eBird can't be reached, but not when eBird refuses the request.
+    """
+    if not is_fresh(file_path, max_age):
+        try:
+            response = fetch()
+        except HTTPError:
+            raise
+        except OSError:  # URLError and timeouts both derive from it
+            if not os.path.exists(file_path):
+                raise
+        else:
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            # Write beside the file and swap it in, so an interrupted write can't leave a broken cache behind.
+            partial_path = file_path + ".partial"
+            with open(partial_path, "w", encoding="utf-8") as file:
+                json.dump(response, file, ensure_ascii=False, indent=2)
+            os.replace(partial_path, file_path)
     with open(file_path, encoding="utf-8") as file:
         return json.load(file)
 
@@ -76,7 +101,9 @@ class LocationCatalogue:
             ),
             cached(
                 os.path.join(subnational_dir, "hotspots.json"),
-                lambda: client.get_hotspots(home_region.subnational),
+                # Without back, eBird returns every Hotspot in the Region, not only the recently visited ones.
+                lambda: client.get_hotspots(home_region.subnational, back=None),
+                HOTSPOTS_MAX_AGE,
             ),
             read_aggregations(aggregations_path),
         )
