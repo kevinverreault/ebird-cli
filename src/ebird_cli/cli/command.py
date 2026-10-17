@@ -1,9 +1,6 @@
-import argparse
-from collections.abc import Generator
 from dataclasses import dataclass
 
 from colorama import Fore
-from prompt_toolkit.completion import Completer, Completion, WordCompleter
 from prompt_toolkit.document import Document
 
 from ..domain.regional_scopes import RegionalScopes
@@ -12,161 +9,55 @@ from ..services.observation_query import ObservationKind, ObservationQuery
 from ..services.printing import PrintingService
 from ..services.taxonomy import TaxonomyService
 from ..utils.logger import logger
-from .argument_parser import CliArgumentParser
-from .command_argument import ArgumentNames, BackArgument, CommandArgument, RegionScopeArgument, SpeciesArgument
-from .input_processing import FLAG, preprocess_input
+from .grammar import Arguments, Flag, Grammar, Positional
+
+DAYS_BACK = [str(day) for day in range(1, 31)]
+
+SCOPE = Positional("scope", choices=[scope.value for scope in RegionalScopes])
+BACK = Flag("back", default="7", choices=DAYS_BACK)
 
 
-class Command(Completer):
-    def __init__(self, observation_query, location_catalogue, printing_service):
-        self.command_name = None
-        self.description = None
-        self.observation_query = observation_query
-        self.location_catalogue = location_catalogue
-        self.printing_service = printing_service
-        self.parser = CliArgumentParser()
-        self.flag_completer = None
-        self.positional_completer = None
-        self.arguments: list[CommandArgument] = []
-        self.mandatory_params = []
-        self.optional_params = []
+def region_flag(location_catalogue: LocationCatalogue) -> Flag:
+    return Flag(
+        "region",
+        multi_word=True,
+        suggestions=lambda typed, arguments: location_catalogue.names(RegionalScopes(arguments["scope"]), typed),
+        hidden_when=lambda arguments: arguments.get("scope") == RegionalScopes.NEARBY,
+    )
 
-        self.setup_arguments()
 
-    def process_command(self, **kwargs):
+def species_flag(taxonomy_service: TaxonomyService) -> Flag:
+    return Flag(
+        "species",
+        multi_word=True,
+        suggestions=lambda typed, _arguments: taxonomy_service.search_by_common_name(typed) if typed else [],
+    )
+
+
+class Command:
+    def __init__(self, command_name: str, description: str, grammar: Grammar):
+        self.command_name = command_name
+        self.description = description
+        self.grammar = grammar
+
+    def run(self, arguments: Arguments):
         raise NotImplementedError
-
-    def register_arguments(self):
-        raise NotImplementedError
-
-    def arg_is_multi_word(self, arg_name):
-        return any(argument.arg_is_multi_word(arg_name) for argument in self.arguments)
 
     def handle_command(self, *args):
-        processed_input = preprocess_input(" ".join(args).split())
-        logger.debug(f"user input: {processed_input}")
-        user_input = self.parser.parse_args(processed_input)
-        if user_input is None:
-            return
+        logger.debug(f"user input: {args}")
+        self.run(self.grammar.parse(list(args)))
 
-        kwargs: dict[str, any] = dict()
-
-        for argument in self.arguments:
-            kwargs.update(argument.get_keywords(user_input))
-
-        self.process_command(**kwargs)
-
-    def find_last_flag(self, words):
-        for word in reversed(words):
-            if word.startswith(FLAG):
-                return word
-        return None
-
-    def setup_arguments(self):
-        self.register_arguments()
-
-        for argument in self.arguments:
-            self.mandatory_params.extend(argument.get_mandatory_arguments())
-            self.optional_params.extend(argument.get_optional_arguments())
-            argument.setup_parser(self.parser)
-
-        self.positional_completer = WordCompleter(self.parser.positional_args, ignore_case=True)
-        self.flag_completer = WordCompleter(self.parser.flag_args, ignore_case=True, match_middle=True)
-
-    def get_completions(self, document: Document, complete_event):
-        text = document.text_before_cursor
-        words = text.split(" ")[1:]
-        logger.debug(f"command get_completions: {words}")
-
-        try:
-            if len(words) <= len([param for param in self.mandatory_params if not param.startswith(FLAG)]):
-                for completion in self.positional_completer.get_completions(document, complete_event):
-                    yield Completion(completion.text, start_position=-len(document.get_word_before_cursor()))
-            elif (
-                words[-1] == ""
-                and not words[-2].startswith(FLAG)
-                and not self.arg_is_multi_word(self.find_last_flag(words))
-            ) or words[-1].startswith(FLAG):
-                yield from self.get_flag_arg_completions(document, complete_event, words)
-            else:
-                yield from self.get_flag_value_completions(words, document)
-        except argparse.ArgumentError as e:
-            raise e.with_traceback(None) from None
-
-    def get_flag_arg_completions(self, document, complete_event, words) -> Generator:
-        flag_count = len([s for s in words if s.startswith(FLAG)])
-        excluded_flags = []
-        for argument in self.arguments:
-            excluded_flags.extend(argument.get_excluded_flags(words))
-        effective_mandatory_count = len(
-            [p for p in self.mandatory_params if p.startswith(FLAG) and p not in excluded_flags]
-        )
-
-        for completion in [
-            completion
-            for completion in self.flag_completer.get_completions(document, complete_event)
-            if completion.text not in words
-            and completion.text not in excluded_flags
-            and (completion.text in self.mandatory_params or flag_count >= effective_mandatory_count)
-        ]:
-            if words[-1] == "":
-                start_position = -len(document.get_word_before_cursor())
-            else:
-                text_before_cursor = document.text_before_cursor
-                hyphen_index = text_before_cursor.rfind(FLAG)
-                start_position = hyphen_index - len(text_before_cursor)
-            yield Completion(completion.text, start_position=start_position)
-
-    def get_flag_value_completions(self, words, document: Document) -> Generator:
-        user_input = self.parser.try_parse_args(preprocess_input(words))
-        if user_input is None:
-            return
-
-        text_before_cursor = document.text_before_cursor
-        words = text_before_cursor.strip().split()
-        if not words:
-            return
-
-        known_flags = set(self.parser.flag_args)
-
-        last_flag_index = None
-        for i in reversed(range(len(words))):
-            if words[i] in known_flags:
-                last_flag_index = i
-                break
-
-        if last_flag_index is not None and last_flag_index < len(words) - 1:
-            words_after_flag = words[last_flag_index + 1 :]
-            start_position = -len(" ".join(words_after_flag))
-        elif last_flag_index is not None:
-            start_position = 0
-        else:
-            start_position = -len(document.get_word_before_cursor())
-
-        for argument in self.arguments:
-            if argument.supports_flag_argument_completion(words[last_flag_index]):
-                yield from argument.get_flag_values(user_input, start_position)
-
-    def print_mandatory_param(self, param_name, param_values):
-        print(f"{Fore.MAGENTA}{param_name}{Fore.RESET}: {param_values}")
-
-    def print_optional_param(self, param_name, param_values):
-        print(f"{Fore.CYAN}{param_name}{Fore.RESET}: {param_values}")
-
-    def print_description(self):
-        print(f"{self.command_example()}")
-        print()
-        print(self.description)
-        print()
+    def get_completions(self, document: Document, _complete_event):
+        _command_name, _, text = document.text_before_cursor.partition(" ")
+        logger.debug(f"command get_completions: {text}")
+        yield from self.grammar.complete(text)
 
     def command_example(self):
         command_name = f"{Fore.RED}{self.command_name}{Fore.RESET}"
-        mandatory_params = (
-            f"{Fore.MAGENTA}<{', '.join(self.mandatory_params)}>{Fore.RESET}" if len(self.mandatory_params) else ""
-        )
-        optional_params = (
-            f"{Fore.CYAN}[{', '.join(self.optional_params)}]{Fore.RESET}" if len(self.optional_params) > 0 else ""
-        )
+        mandatory = [positional.name for positional in self.grammar.positionals]
+        optional = [flag.token for flag in self.grammar.flags]
+        mandatory_params = f"{Fore.MAGENTA}<{', '.join(mandatory)}>{Fore.RESET}" if mandatory else ""
+        optional_params = f"{Fore.CYAN}[{', '.join(optional)}]{Fore.RESET}" if optional else ""
 
         return f"{command_name:18} {mandatory_params} {optional_params}"
 
@@ -175,29 +66,34 @@ class Command(Completer):
 class ObservationCommandArgs:
     region: str | None
     scope: RegionalScopes
-    back: int
+    back: str
     species: str | None = None
 
 
 class ObservationCommand(Command):
     kind: ObservationKind
-    scope_arg = str(ArgumentNames.SCOPE.value)
-    region_arg = str(ArgumentNames.REGION.value)
-    back_arg = str(ArgumentNames.BACK.value)
-    species_arg = str(ArgumentNames.SPECIES.value)
 
-    def process_command(self, **kwargs):
-        logger.debug(f"process_command - kwargs: {kwargs}")
+    def __init__(
+        self,
+        command_name: str,
+        description: str,
+        grammar: Grammar,
+        observation_query: ObservationQuery,
+        printing_service: PrintingService,
+    ):
+        super().__init__(command_name, description, grammar)
+        self.observation_query = observation_query
+        self.printing_service = printing_service
+
+    def run(self, arguments: Arguments):
+        logger.debug(f"run - arguments: {arguments}")
         args = ObservationCommandArgs(
-            region=kwargs[self.region_arg],
-            scope=kwargs[self.scope_arg],
-            back=kwargs[self.back_arg],
-            species=kwargs.get(self.species_arg),
+            region=arguments["region"],
+            scope=RegionalScopes(arguments["scope"]),
+            back=arguments["back"],
+            species=arguments.get("species"),
         )
         self.handle_observation(args)
-
-    def register_arguments(self):
-        self.arguments = [RegionScopeArgument(self.location_catalogue), BackArgument()]
 
     def handle_observation(self, args: ObservationCommandArgs):
         self.print_observations(args)
@@ -219,18 +115,14 @@ class RecentCommand(ObservationCommand):
         printing_service: PrintingService,
         taxonomy_service: TaxonomyService,
     ):
+        super().__init__(
+            "recent",
+            "Retrieve recent observations for the specified region",
+            Grammar([SCOPE], [region_flag(location_catalogue), species_flag(taxonomy_service), BACK]),
+            observation_query,
+            printing_service,
+        )
         self.taxonomy_service = taxonomy_service
-        super().__init__(observation_query, location_catalogue, printing_service)
-
-        self.command_name = "recent"
-        self.description = "Retrieve recent observations for the specified region"
-
-    def register_arguments(self):
-        self.arguments = [
-            RegionScopeArgument(self.location_catalogue),
-            SpeciesArgument(self.taxonomy_service),
-            BackArgument(),
-        ]
 
     def handle_observation(self, args: ObservationCommandArgs):
         species_code = None
@@ -251,7 +143,10 @@ class NotableCommand(ObservationCommand):
         location_catalogue: LocationCatalogue,
         printing_service: PrintingService,
     ):
-        super().__init__(observation_query, location_catalogue, printing_service)
-
-        self.command_name = "notable"
-        self.description = "Retrieve notable observations for the specified region"
+        super().__init__(
+            "notable",
+            "Retrieve notable observations for the specified region",
+            Grammar([SCOPE], [region_flag(location_catalogue), BACK]),
+            observation_query,
+            printing_service,
+        )

@@ -4,6 +4,7 @@ import pytest
 from conftest import strip_ansi, table_rows
 from fakes import FakeEbirdClient, observation
 
+from ebird_cli.cli.grammar import CommandLineError
 from ebird_cli.main import handle_input
 
 PROGRAM_ARGS = argparse.Namespace(region="CA-QC-MR", locale="fr")
@@ -87,10 +88,30 @@ def test_missing_scope_is_reported_as_invalid_argument(cli, capsys):
     assert cli.client.calls == []
 
 
-def test_argument_error_is_reported_as_invalid_argument(capsys):
+def test_command_line_error_is_reported_as_invalid_argument(capsys):
     class RejectingCommand:
         def handle_command(self, *_args):
-            raise argparse.ArgumentError(None, "bad value")
+            raise CommandLineError("bad value")
 
     assert handle_input("reject now", {"reject": RejectingCommand()}, PROGRAM_ARGS) is True
     assert capsys.readouterr().out == "Invalid argument: bad value\n"
+
+
+@pytest.mark.parametrize(
+    ("line", "message"),
+    [
+        ("recent regional -back", "argument -back: expected one argument"),
+        ("recent regional -back 3 4", "unrecognized arguments: 4"),
+        ("recent regional -h", "unrecognized arguments: -h"),
+    ],
+)
+def test_flag_errors_are_reported_as_invalid_argument(cli, capsys, line, message):
+    assert handle_input(line, cli.commands, PROGRAM_ARGS) is True
+    assert capsys.readouterr().out == f"Invalid argument: {message}\n"
+    assert cli.client.calls == []
+
+
+def test_a_flag_can_be_abbreviated(cli):
+    handle_input("recent regional -b 3 -reg Côte-Nord", cli.commands, PROGRAM_ARGS)
+
+    assert [(call.args, call.back) for call in cli.client.calls] == [((["CA-QC-CN"],), "3")]

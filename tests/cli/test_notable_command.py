@@ -1,8 +1,8 @@
-import argparse
-
 import pytest
 from conftest import LAT, LONG, table_rows
 from fakes import Call, FakeEbirdClient, observation
+
+from ebird_cli.cli.grammar import CommandLineError
 
 
 def test_notable_nearby_requests_nearby_notable_observations(cli):
@@ -34,7 +34,7 @@ def test_notable_passes_back_to_ebird(cli):
 
 
 def test_notable_rejects_a_species_flag_as_an_invalid_argument(cli):
-    with pytest.raises(argparse.ArgumentError, match="unrecognized arguments: -species Harfang des neiges"):
+    with pytest.raises(CommandLineError, match="unrecognized arguments: -species Harfang des neiges"):
         cli.run("notable nearby -species Harfang des neiges")
 
     assert cli.client.calls == []
