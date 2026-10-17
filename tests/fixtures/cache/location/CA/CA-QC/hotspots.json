@@ -1,0 +1,47 @@
+[
+  {
+    "locId": "L1001",
+    "locName": "Dunes de Tadoussac",
+    "countryCode": "CA",
+    "subnational1Code": "CA-QC",
+    "subnational2Code": "CA-QC-CN",
+    "lat": 48.15,
+    "lng": -69.69
+  },
+  {
+    "locId": "L1002",
+    "locName": "Dunes de Tadoussac--Halte",
+    "countryCode": "CA",
+    "subnational1Code": "CA-QC",
+    "subnational2Code": "CA-QC-CN",
+    "lat": 48.15,
+    "lng": -69.7
+  },
+  {
+    "locId": "L2001",
+    "locName": "Parc de l'Île-Saint-Quentin",
+    "countryCode": "CA",
+    "subnational1Code": "CA-QC",
+    "subnational2Code": "CA-QC-MR",
+    "lat": 46.37,
+    "lng": -72.52
+  },
+  {
+    "locId": "L2002",
+    "locName": "Parc national de la Mauricie",
+    "countryCode": "CA",
+    "subnational1Code": "CA-QC",
+    "subnational2Code": "CA-QC-MR",
+    "lat": 46.8,
+    "lng": -72.97
+  },
+  {
+    "locId": "L3001",
+    "locName": "Technoparc--Étang Hertel",
+    "countryCode": "CA",
+    "subnational1Code": "CA-QC",
+    "subnational2Code": "CA-QC-MO",
+    "lat": 45.48,
+    "lng": -73.75
+  }
+]

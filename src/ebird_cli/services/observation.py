@@ -1,5 +1,3 @@
-from itertools import chain
-
 from ..domain import Observation
 from .ebird_client import EbirdClient
 
@@ -54,13 +52,13 @@ class ObservationService:
         return self.get_observations_from_recent(observations)
 
     def get_recent_observations(self, locations: list, back=DEFAULT_DAYS) -> list:
-        locs = list(set(chain.from_iterable(item if isinstance(item, list) else [item] for item in locations)))
+        locs = list(dict.fromkeys(locations))
         observations = self.api_client.get_observations(locs, back=back, hotspot=True)
 
         return self.get_observations_from_recent(observations)
 
     def get_species_observations(self, locations: list, species_code: str, back=DEFAULT_DAYS) -> list:
-        locs = list(set(chain.from_iterable(item if isinstance(item, list) else [item] for item in locations)))
+        locs = list(dict.fromkeys(locations))
         observations = self.api_client.get_species_observations(species_code, locs, back=back, hotspot=True)
 
         return self.get_observations_from_species(observations)

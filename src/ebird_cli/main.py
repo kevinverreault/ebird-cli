@@ -5,6 +5,7 @@ import ssl
 import urllib.request
 
 import certifi
+from appdirs import user_cache_dir
 from colorama import Fore
 from prompt_toolkit import PromptSession
 from prompt_toolkit.key_binding import KeyBindings
@@ -15,7 +16,8 @@ from .cli.autocomplete import ContextSensitiveCompleter
 from .cli.command import NotableCommand, RecentCommand
 from .domain.region import Region
 from .services.cache import CacheService
-from .services.location import LocationService
+from .services.ebird_client import EbirdClient
+from .services.location_catalogue import LocationCatalogue
 from .services.observation import ObservationService
 from .services.printing import PrintingService
 from .services.taxonomy import TaxonomyService
@@ -168,17 +170,20 @@ def main():
 
     use_certifi_ca_bundle()
 
-    cache_service = CacheService(api_key, locale, Region(region))
-    observation_service = ObservationService(api_key, locale, lat, long)
+    client = EbirdClient(api_key, locale)
+    cache_dir = user_cache_dir("ebird_cli")
+
+    cache_service = CacheService(api_key, locale, Region(region), api_client=client, cache_dir=cache_dir)
+    observation_service = ObservationService(api_key, locale, lat, long, api_client=client)
     printing_service = PrintingService(life_list, year_list)
-    location_service = LocationService(cache_service.location_cache, aggregations)
+    location_catalogue = LocationCatalogue.load(Region(region), client, cache_dir, aggregations)
     taxonomy_service = TaxonomyService(cache_service.taxonomy_cache)
 
     commands = {
         command.command_name: command
         for command in [
-            RecentCommand(observation_service, location_service, printing_service, taxonomy_service),
-            NotableCommand(observation_service, location_service, printing_service),
+            RecentCommand(observation_service, location_catalogue, printing_service, taxonomy_service),
+            NotableCommand(observation_service, location_catalogue, printing_service),
         ]
     }
 

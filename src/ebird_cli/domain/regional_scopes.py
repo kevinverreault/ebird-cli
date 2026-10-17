@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class RegionalScopes(Enum):
+class RegionalScopes(StrEnum):
     HOTSPOT = "hotspot"
     NEARBY = "nearby"
     REGIONAL = "regional"

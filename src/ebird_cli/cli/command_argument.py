@@ -5,7 +5,7 @@ from enum import Enum
 from prompt_toolkit.completion import Completion
 
 from ..domain.regional_scopes import RegionalScopes
-from ..services import LocationService, TaxonomyService
+from ..services import LocationCatalogue, TaxonomyService
 from .argument_parser import CliArgumentParser
 from .input_processing import FLAG, flag_arg_name
 
@@ -54,16 +54,19 @@ class RegionScopeArgument(CommandArgument):
     scope_arg = str(ArgumentNames.SCOPE.value)
     region_arg = str(ArgumentNames.REGION.value)
 
-    def __init__(self, location_service: LocationService):
-        self.location_service = location_service
+    def __init__(self, location_catalogue: LocationCatalogue):
+        self.location_catalogue = location_catalogue
 
     def get_flag_values(self, user_input, start_position) -> Generator:
-        for completion in self.get_region_completions(user_input.scope, user_input.region):
+        for completion in self.get_region_completions(RegionalScopes(user_input.scope), user_input.region):
             yield Completion(completion, start_position=start_position)
 
     def setup_parser(self, parser: CliArgumentParser):
         parser.add_positional_argument(
-            self.scope_arg, type=str, choices=[scope.value for scope in RegionalScopes], help="Regional scope"
+            self.scope_arg,
+            type=str,
+            choices=[scope.value for scope in RegionalScopes],
+            help="Regional scope",
         )
         parser.add_flag_argument(flag_arg_name(self.region_arg), type=str, required=False, help="Region code")
 
@@ -77,32 +80,19 @@ class RegionScopeArgument(CommandArgument):
         return arg_name == flag_arg_name(self.region_arg)
 
     def get_keywords(self, user_input):
-        return {self.scope_arg: user_input.scope, self.region_arg: user_input.region}
+        return {self.scope_arg: RegionalScopes(user_input.scope), self.region_arg: user_input.region}
 
     def supports_flag_argument_completion(self, arg_name: str):
         return arg_name == flag_arg_name(self.region_arg)
 
     def get_excluded_flags(self, words) -> list:
         positional_words = [w for w in words if not w.startswith(FLAG)]
-        if positional_words and positional_words[0] == RegionalScopes.NEARBY.value:
+        if positional_words and positional_words[0] == RegionalScopes.NEARBY:
             return [flag_arg_name(self.region_arg)]
         return []
 
-    def get_region_completions(self, scope, region) -> list:
-        if scope == RegionalScopes.SUBNATIONAL.value:
-            return (
-                self.location_service.get_subnationals()
-                if region == ""
-                else self.location_service.search_subnationals(region)
-            )
-        elif scope == RegionalScopes.REGIONAL.value:
-            return self.location_service.get_regions() if region == "" else self.location_service.search_regions(region)
-        elif scope == RegionalScopes.HOTSPOT.value:
-            return (
-                self.location_service.get_hotspots() if region == "" else self.location_service.search_hotspots(region)
-            )
-        else:
-            return []
+    def get_region_completions(self, scope: RegionalScopes, region: str | None) -> list:
+        return self.location_catalogue.names(scope, region or "")
 
 
 class BackArgument(CommandArgument):

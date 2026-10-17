@@ -1,0 +1,26 @@
+[
+  {
+    "code": "CA-AB",
+    "name": "Alberta"
+  },
+  {
+    "code": "CA-BC",
+    "name": "Colombie-Britannique"
+  },
+  {
+    "code": "CA-NB",
+    "name": "Nouveau-Brunswick"
+  },
+  {
+    "code": "CA-NS",
+    "name": "Nouvelle-Écosse"
+  },
+  {
+    "code": "CA-ON",
+    "name": "Ontario"
+  },
+  {
+    "code": "CA-QC",
+    "name": "Québec"
+  }
+]

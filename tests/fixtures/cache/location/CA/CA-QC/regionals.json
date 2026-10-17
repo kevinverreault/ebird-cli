@@ -1,0 +1,18 @@
+[
+  {
+    "code": "CA-QC-CN",
+    "name": "Côte-Nord"
+  },
+  {
+    "code": "CA-QC-MG",
+    "name": "Montérégie"
+  },
+  {
+    "code": "CA-QC-MO",
+    "name": "Montréal"
+  },
+  {
+    "code": "CA-QC-MR",
+    "name": "Mauricie"
+  }
+]
