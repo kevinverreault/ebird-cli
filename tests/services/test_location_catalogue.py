@@ -172,3 +172,14 @@ def test_load_reuses_what_an_earlier_load_cached_without_calling_ebird(tmp_path)
 
     assert client.calls == []
     assert catalogue.names(RegionalScopes.HOTSPOT) == ["Parc de l'Île-Saint-Quentin"]
+
+
+def test_load_fetches_only_the_hotspots_when_they_alone_are_missing_from_the_cache(tmp_path):
+    LocationCatalogue.load(Region("CA-QC-MR"), fetching_client(), str(tmp_path))
+    (tmp_path / "location" / "CA" / "CA-QC" / "hotspots.json").unlink()
+    client = fetching_client()
+
+    catalogue = LocationCatalogue.load(Region("CA-QC-MR"), client, str(tmp_path))
+
+    assert [(call.method, call.args) for call in client.calls] == [("get_hotspots", ("CA-QC",))]
+    assert catalogue.names(RegionalScopes.HOTSPOT) == ["Parc de l'Île-Saint-Quentin"]

@@ -1,18 +1,23 @@
-import csv
 import json
 import os
+from collections.abc import Callable
 
 from ..domain.fields import EbirdFields
 from ..domain.region import Region
 from ..domain.regional_scopes import RegionalScopes
-from .cache import write_csv
 
 LOCATION_DIR = "location"
 
 
-def read_csv(file_path) -> list[dict]:
-    with open(file_path, encoding="utf-8", newline="") as file:
-        return list(csv.DictReader(file))
+def cached(file_path: str, fetch: Callable[[], list[dict]]) -> list[dict]:
+    """The eBird response cached at file_path, fetched and stored verbatim first if it isn't there."""
+    if not os.path.exists(file_path):
+        response = fetch()
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+        with open(file_path, "w", encoding="utf-8") as file:
+            json.dump(response, file, ensure_ascii=False, indent=2)
+    with open(file_path, encoding="utf-8") as file:
+        return json.load(file)
 
 
 def read_aggregations(aggregations_path: str | None) -> dict[str, list[str]]:
@@ -59,25 +64,20 @@ class LocationCatalogue:
         """Read the Home Region's Locations from the cache, fetching them from eBird when missing."""
         national_dir = os.path.join(cache_dir, LOCATION_DIR, home_region.national)
         subnational_dir = os.path.join(national_dir, home_region.subnational)
-        subnationals_path = os.path.join(national_dir, "subregions.csv")
-        regionals_path = os.path.join(subnational_dir, "subregions.csv")
-        hotspots_path = os.path.join(subnational_dir, "hotspots.csv")
-        os.makedirs(subnational_dir, exist_ok=True)
-
-        if not os.path.exists(subnationals_path):
-            write_csv(subnationals_path, client.get_regions("subnational1", home_region.national))
-
-        if not os.path.exists(regionals_path):
-            regionals = client.get_regions("subnational2", home_region.subnational)
-            hotspots = client.get_hotspots(home_region.subnational)
-            write_csv(regionals_path, regionals)
-            write_csv(hotspots_path, hotspots)
-
         return cls(
             home_region,
-            read_csv(subnationals_path),
-            read_csv(regionals_path),
-            read_csv(hotspots_path),
+            cached(
+                os.path.join(national_dir, "subnationals.json"),
+                lambda: client.get_regions("subnational1", home_region.national),
+            ),
+            cached(
+                os.path.join(subnational_dir, "regionals.json"),
+                lambda: client.get_regions("subnational2", home_region.subnational),
+            ),
+            cached(
+                os.path.join(subnational_dir, "hotspots.json"),
+                lambda: client.get_hotspots(home_region.subnational),
+            ),
             read_aggregations(aggregations_path),
         )
 
