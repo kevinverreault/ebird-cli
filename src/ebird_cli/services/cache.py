@@ -14,6 +14,20 @@ LOCATION_DIR = "location"
 TAXONOMY_DIR = "taxonomy"
 
 
+def write_csv(file_path, data):
+    with open(file_path, mode="w", newline="", encoding="utf-8") as csvfile:
+        fieldnames = list(dict.fromkeys(k for row in data for k in row))
+        writer = csv.DictWriter(
+            csvfile,
+            fieldnames=fieldnames,
+            quoting=csv.QUOTE_MINIMAL,
+            extrasaction="ignore",
+        )
+
+        writer.writeheader()
+        writer.writerows(data)
+
+
 class CacheService:
     def __init__(self, api_key: str, locale: str, region: Region, api_client=None, cache_dir: str | None = None):
         self.api_client = api_client or EbirdClient(api_key, locale)
@@ -40,13 +54,13 @@ class CacheService:
 
         if not os.path.exists(national_subregions_path):
             subnationals = self.api_client.get_regions("subnational1", region.national)
-            self.write_csv(national_subregions_path, subnationals)
+            write_csv(national_subregions_path, subnationals)
 
         if not os.path.exists(subnational_subregions_path):
             subregionals = self.api_client.get_regions("subnational2", region.subnational)
             hotspots = self.api_client.get_hotspots(region.subnational)
-            self.write_csv(subnational_subregions_path, subregionals)
-            self.write_csv(subnational_hotspots_path, hotspots)
+            write_csv(subnational_subregions_path, subregionals)
+            write_csv(subnational_hotspots_path, hotspots)
 
         national_taxonomy_path = self.get_taxonomy(region)
 
@@ -58,19 +72,6 @@ class CacheService:
             subnational_hotspots_path,
         )
 
-    def write_csv(self, file_path, data):
-        with open(file_path, mode="w", newline="", encoding="utf-8") as csvfile:
-            fieldnames = list(dict.fromkeys(k for row in data for k in row))
-            writer = csv.DictWriter(
-                csvfile,
-                fieldnames=fieldnames,
-                quoting=csv.QUOTE_MINIMAL,
-                extrasaction="ignore",
-            )
-
-            writer.writeheader()
-            writer.writerows(data)
-
     def get_taxonomy(self, region: Region) -> str:
         taxonomy_path = os.path.join(self.cache_dir, TAXONOMY_DIR, "taxonomy.csv")
         national_taxonomy_path = os.path.join(self.cache_dir, TAXONOMY_DIR, region.national, "taxonomy.csv")
@@ -78,7 +79,7 @@ class CacheService:
         if not os.path.exists(taxonomy_path):
             taxonomy = self.api_client.get_ebird_taxonomy()
             os.makedirs(os.path.dirname(taxonomy_path), exist_ok=True)
-            self.write_csv(taxonomy_path, taxonomy)
+            write_csv(taxonomy_path, taxonomy)
 
         taxonomy_df = pd.read_csv(taxonomy_path)
 
