@@ -8,7 +8,7 @@ from prompt_toolkit.document import Document
 
 from ..domain.regional_scopes import RegionalScopes
 from ..services.location_catalogue import LocationCatalogue
-from ..services.observation import ObservationService
+from ..services.observation_query import ObservationKind, ObservationQuery
 from ..services.printing import PrintingService
 from ..services.taxonomy import TaxonomyService
 from ..utils.logger import logger
@@ -18,10 +18,10 @@ from .input_processing import FLAG, preprocess_input
 
 
 class Command(Completer):
-    def __init__(self, observation_service, location_catalogue, printing_service):
+    def __init__(self, observation_query, location_catalogue, printing_service):
         self.command_name = None
         self.description = None
-        self.observation_service = observation_service
+        self.observation_query = observation_query
         self.location_catalogue = location_catalogue
         self.printing_service = printing_service
         self.parser = CliArgumentParser()
@@ -180,6 +180,7 @@ class ObservationCommandArgs:
 
 
 class ObservationCommand(Command):
+    kind: ObservationKind
     scope_arg = str(ArgumentNames.SCOPE.value)
     region_arg = str(ArgumentNames.REGION.value)
     back_arg = str(ArgumentNames.BACK.value)
@@ -199,19 +200,27 @@ class ObservationCommand(Command):
         self.arguments = [RegionScopeArgument(self.location_catalogue), BackArgument()]
 
     def handle_observation(self, args: ObservationCommandArgs):
-        raise NotImplementedError
+        self.print_observations(args)
+
+    def print_observations(self, args: ObservationCommandArgs, species_code: str | None = None):
+        observations = self.observation_query.observations(
+            self.kind, args.scope, args.region, species_code=species_code, back=args.back
+        )
+        self.printing_service.print_observations(observations)
 
 
 class RecentCommand(ObservationCommand):
+    kind = ObservationKind.RECENT
+
     def __init__(
         self,
-        observation_service: ObservationService,
+        observation_query: ObservationQuery,
         location_catalogue: LocationCatalogue,
         printing_service: PrintingService,
         taxonomy_service: TaxonomyService,
     ):
         self.taxonomy_service = taxonomy_service
-        super().__init__(observation_service, location_catalogue, printing_service)
+        super().__init__(observation_query, location_catalogue, printing_service)
 
         self.command_name = "recent"
         self.description = "Retrieve recent observations for the specified region"
@@ -224,46 +233,25 @@ class RecentCommand(ObservationCommand):
         ]
 
     def handle_observation(self, args: ObservationCommandArgs):
+        species_code = None
         if args.species:
             species_codes = self.taxonomy_service.get_species_code(args.species)
             if not species_codes:
                 return
             species_code = species_codes[0]
-            if args.scope == RegionalScopes.NEARBY:
-                observations = self.observation_service.get_nearby_species_observations(species_code, args.back)
-            else:
-                observations = self.observation_service.get_species_observations(
-                    self.location_catalogue.resolve(args.scope, args.region), species_code, args.back
-                )
-        else:
-            if args.scope == RegionalScopes.NEARBY:
-                observations = self.observation_service.get_nearby_recent_observations(args.back)
-            else:
-                observations = self.observation_service.get_recent_observations(
-                    self.location_catalogue.resolve(args.scope, args.region), args.back
-                )
-
-        self.printing_service.print_observations(observations)
+        self.print_observations(args, species_code)
 
 
 class NotableCommand(ObservationCommand):
+    kind = ObservationKind.NOTABLE
+
     def __init__(
         self,
-        observation_service: ObservationService,
+        observation_query: ObservationQuery,
         location_catalogue: LocationCatalogue,
         printing_service: PrintingService,
     ):
-        super().__init__(observation_service, location_catalogue, printing_service)
+        super().__init__(observation_query, location_catalogue, printing_service)
 
         self.command_name = "notable"
         self.description = "Retrieve notable observations for the specified region"
-
-    def handle_observation(self, args: ObservationCommandArgs):
-        if args.scope == RegionalScopes.NEARBY:
-            observations = self.observation_service.get_nearby_notable_observations(args.back)
-        else:
-            observations = self.observation_service.get_notable_observations(
-                self.location_catalogue.resolve(args.scope, args.region), args.back
-            )
-
-        self.printing_service.print_observations(observations)

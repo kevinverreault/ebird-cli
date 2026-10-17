@@ -33,3 +33,11 @@ _Avoid_: location service, location cache
 **Regional scope**:
 The kind of place a query targets: `hotspot`, `regional`, `subnational`, or `nearby` (around the user's coordinates).
 _Avoid_: level, region type
+
+**Observation kind**:
+Which observations a query asks eBird for: `recent` (every species reported, or one species' reports) or `notable` (species eBird flags as rare or unusual for the place).
+_Avoid_: query type, endpoint
+
+**Observation query**:
+Observations of one Observation kind at a Location or nearby, with repeat reports collapsed: recent keeps the latest per species (or, for one species, per Location), notable the first per species at each Location.
+_Avoid_: observation service

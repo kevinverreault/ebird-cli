@@ -18,7 +18,7 @@ from .domain.region import Region
 from .services.cache import CacheService
 from .services.ebird_client import EbirdClient
 from .services.location_catalogue import LocationCatalogue
-from .services.observation import ObservationService
+from .services.observation_query import ObservationQuery
 from .services.printing import PrintingService
 from .services.taxonomy import TaxonomyService
 
@@ -174,16 +174,16 @@ def main():
     cache_dir = user_cache_dir("ebird_cli")
 
     cache_service = CacheService(api_key, locale, Region(region), api_client=client, cache_dir=cache_dir)
-    observation_service = ObservationService(api_key, locale, lat, long, api_client=client)
     printing_service = PrintingService(life_list, year_list)
     location_catalogue = LocationCatalogue.load(Region(region), client, cache_dir, aggregations)
+    observation_query = ObservationQuery(client, location_catalogue, lat, long)
     taxonomy_service = TaxonomyService(cache_service.taxonomy_cache)
 
     commands = {
         command.command_name: command
         for command in [
-            RecentCommand(observation_service, location_catalogue, printing_service, taxonomy_service),
-            NotableCommand(observation_service, location_catalogue, printing_service),
+            RecentCommand(observation_query, location_catalogue, printing_service, taxonomy_service),
+            NotableCommand(observation_query, location_catalogue, printing_service),
         ]
     }
 
