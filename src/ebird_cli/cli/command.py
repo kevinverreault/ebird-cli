@@ -11,10 +11,8 @@ from ..services.taxonomy import TaxonomyService
 from ..utils.logger import logger
 from .grammar import Arguments, Flag, Grammar, Positional
 
-DAYS_BACK = [str(day) for day in range(1, 31)]
-
 SCOPE = Positional("scope", choices=[scope.value for scope in RegionalScopes])
-BACK = Flag("back", default="7", choices=DAYS_BACK)
+BACK = Flag("back", default="7", choices=range(1, 31))
 
 
 def region_flag(location_catalogue: LocationCatalogue) -> Flag:

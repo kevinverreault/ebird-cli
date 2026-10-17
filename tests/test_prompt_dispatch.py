@@ -102,6 +102,7 @@ def test_command_line_error_is_reported_as_invalid_argument(capsys):
     [
         ("recent regional -back", "argument -back: expected one argument"),
         ("recent regional -back 3 4", "unrecognized arguments: 4"),
+        ("recent regional -back 99", "argument -back: invalid choice: '99' (choose from 1 to 30)"),
         ("recent regional -h", "unrecognized arguments: -h"),
     ],
 )

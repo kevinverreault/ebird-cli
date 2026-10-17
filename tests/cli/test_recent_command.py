@@ -2,6 +2,8 @@ import pytest
 from conftest import FIXTURES, LAT, LONG, table_rows
 from fakes import Call, FakeEbirdClient, observation
 
+from ebird_cli.cli.grammar import CommandLineError
+
 
 def only_call(cli) -> Call:
     assert len(cli.client.calls) == 1
@@ -118,15 +120,16 @@ def test_recent_back_within_1_to_30_is_passed_to_ebird(cli, back, expected):
     assert only_call(cli).back == expected
 
 
-@pytest.mark.parametrize("back", ["0", "31", "-3"])
-def test_recent_back_out_of_range_defaults_to_7(cli, back):
-    cli.run(f"recent regional -back {back}")
+@pytest.mark.parametrize("back", ["0", "31", "-3", "trois"])
+def test_recent_back_outside_1_to_30_is_refused_without_calling_ebird(cli, back):
+    with pytest.raises(CommandLineError, match=rf"argument -back: invalid choice: '{back}' \(choose from 1 to 30\)"):
+        cli.run(f"recent regional -back {back}")
 
-    assert only_call(cli).back == "7"
+    assert cli.client.calls == []
 
 
-def test_recent_non_numeric_back_defaults_to_7(cli):
-    cli.run("recent regional -back trois")
+def test_recent_without_back_asks_for_7_days(cli):
+    cli.run("recent regional")
 
     assert only_call(cli).back == "7"
 

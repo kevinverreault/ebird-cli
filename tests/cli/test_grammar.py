@@ -56,11 +56,28 @@ def test_parse_rejects_words_the_flags_do_not_take(words, message):
     assert error.value.message == message
 
 
-@pytest.mark.parametrize(("value", "expected"), [("2", "2"), ("4", "1"), ("-2", "1"), ("two", "1")])
-def test_a_flag_value_outside_its_choices_falls_back_to_the_default(value, expected):
-    grammar = Grammar([COLOURS], [Flag("coats", choices=["1", "2", "3"], default="1")])
+@pytest.mark.parametrize(
+    ("choices", "value", "message"),
+    [
+        (["matte", "gloss"], "satin", "argument -finish: invalid choice: 'satin' (choose from 'matte', 'gloss')"),
+        (range(1, 4), "4", "argument -finish: invalid choice: '4' (choose from 1 to 3)"),
+        (range(1, 4), "-2", "argument -finish: invalid choice: '-2' (choose from 1 to 3)"),
+        (range(1, 4), "two", "argument -finish: invalid choice: 'two' (choose from 1 to 3)"),
+    ],
+)
+def test_parse_rejects_a_flag_value_outside_its_choices(choices, value, message):
+    grammar = Grammar([COLOURS], [Flag("finish", choices=choices, default="1")])
 
-    assert grammar.parse(["red", "-coats", value])["coats"] == expected
+    with pytest.raises(CommandLineError) as error:
+        grammar.parse(["red", "-finish", value])
+
+    assert error.value.message == message
+
+
+def test_a_flag_accepts_any_number_in_its_range_of_choices():
+    grammar = Grammar([COLOURS], [Flag("coats", choices=range(1, 4))])
+
+    assert grammar.parse(["red", "-coats", "3"])["coats"] == "3"
 
 
 def completions(grammar: Grammar, text: str) -> list[tuple[str, int]]:
@@ -110,6 +127,8 @@ def labels(typed: str, arguments: dict) -> list[str]:
         ("blue -label ", [("blue door", 0), ("blue dune", 0)]),
         ("red -label red d", [("red door", -5), ("red dune", -5)]),
         ("red -label red du", [("red dune", -6)]),
+        ("red -label red  du", [("red dune", -7)]),
+        ("red  -label  red  ", [("red door", -5), ("red dune", -5)]),
         ("purple -label ", []),
         ("red -shade dark -label ", []),
     ],
@@ -120,9 +139,26 @@ def test_complete_asks_a_flag_for_values_matching_every_word_typed_after_it(text
     assert completions(grammar, text) == expected
 
 
-@pytest.mark.parametrize(("text", "expected"), [("red -coats ", ["1", "2", "12"]), ("red -coats 2", ["2", "12"])])
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [("red -coats ", ["1", "2", "12"]), ("red -coats 2", ["2", "12"]), ("red -coats 0", []), ("red -coats x", [])],
+)
 def test_complete_offers_the_choices_of_a_flag_containing_what_was_typed(text, expected):
     grammar = Grammar([COLOURS], [Flag("coats", choices=["1", "2", "12"])])
+
+    assert [completion for completion, _ in completions(grammar, text)] == expected
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("red -coats ", ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]),
+        ("red -coats 1", ["1", "10", "11"]),
+        ("red -coats 0", ["10"]),
+    ],
+)
+def test_complete_offers_the_numbers_of_a_range_of_choices_containing_what_was_typed(text, expected):
+    grammar = Grammar([COLOURS], [Flag("coats", choices=range(1, 12))])
 
     assert [completion for completion, _ in completions(grammar, text)] == expected
 

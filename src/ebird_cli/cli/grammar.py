@@ -1,5 +1,6 @@
 """The command-line grammar of a command: the words it accepts after its name, and what to offer while they're typed."""
 
+import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 
@@ -18,6 +19,21 @@ class CommandLineError(Exception):
         self.message = message
 
 
+Choices = Sequence[str] | range
+
+
+def describe(choices: Choices) -> str:
+    if isinstance(choices, range):
+        return f"{choices.start} to {choices.stop - 1}"
+    return ", ".join(repr(choice) for choice in choices)
+
+
+def is_choice(word: str, choices: Choices) -> bool:
+    if isinstance(choices, range):
+        return word.isascii() and word.isdigit() and int(word) in choices
+    return word in choices
+
+
 @dataclass(frozen=True)
 class Positional:
     """A mandatory word, before any flag, that must be one of choices."""
@@ -30,25 +46,22 @@ class Positional:
 class Flag:
     """An optional -name followed by its value: one word, or every word up to the next flag when multi_word.
 
-    A value outside choices falls back to default. suggestions(typed, arguments) gives the completions for what was
-    typed after the flag; without it, completion offers the choices containing it. The flag isn't offered while
-    hidden_when(positional arguments) holds.
+    A value given must be one of choices, when the flag has them; an absent flag has default. suggestions(typed,
+    arguments) gives the completions for what was typed after the flag; without it, completion offers the choices
+    containing it. The flag isn't offered while hidden_when(positional arguments) holds.
     """
 
     name: str
     multi_word: bool = False
     default: str | None = None
-    choices: Sequence[str] | None = None
+    choices: Choices | None = None
     suggestions: Callable[[str, Arguments], list[str]] | None = None
     hidden_when: Callable[[Arguments], bool] = lambda _arguments: False
-
-    def accepts(self, value: str) -> bool:
-        return self.choices is None or value in self.choices
 
     def complete(self, typed: str, arguments: Arguments) -> list[str]:
         if self.suggestions is not None:
             return self.suggestions(typed, arguments)
-        return [choice for choice in self.choices or [] if typed in choice]
+        return [str(choice) for choice in self.choices or [] if typed in str(choice)]
 
     @property
     def token(self) -> str:
@@ -64,14 +77,16 @@ class Grammar:
 
     def parse(self, words: list[str]) -> Arguments:
         """The value of each argument named in the line, or CommandLineError when the grammar does not accept it."""
-        reading = self._read(words)
+        return self._arguments(self._read(words))
+
+    def _arguments(self, reading: "_Reading", completing: Flag | None = None) -> Arguments:
+        """The arguments of a reading, not yet holding the value of the flag being completed to its choices."""
         for flag in self.flags:
             if reading.flag_words.get(flag.name) == []:
                 raise CommandLineError(f"argument {flag.token}: expected one argument")
         for positional, word in self._typed_positionals(reading):
-            if word not in positional.choices:
-                choices = ", ".join(repr(choice) for choice in positional.choices)
-                raise CommandLineError(f"argument {positional.name}: invalid choice: {word!r} (choose from {choices})")
+            if not is_choice(word, positional.choices):
+                raise invalid_choice(positional.name, word, positional.choices)
         missing = [positional.name for positional in self.positionals[len(reading.positional_words) :]]
         if missing:
             raise CommandLineError(f"the following arguments are required: {', '.join(missing)}")
@@ -82,14 +97,18 @@ class Grammar:
         arguments = self._positional_arguments(reading)
         for flag in self.flags:
             values = reading.flag_words.get(flag.name)
-            value = " ".join(values) if values else None
-            arguments[flag.name] = value if value is not None and flag.accepts(value) else flag.default
+            value = " ".join(values) if values else flag.default
+            if values and flag.choices is not None and flag is not completing and not is_choice(value, flag.choices):
+                raise invalid_choice(flag.token, value, flag.choices)
+            arguments[flag.name] = value
         return arguments
 
     def complete(self, text: str) -> list[Completion]:
         """What to offer for the word being typed at the end of text, the words after the command name."""
-        *words, typed = text.split(" ")
-        words = [word for word in words if word]
+        spans = [(match.start(), match.group()) for match in re.finditer(r"\S+", text)]
+        typed_start, typed = spans.pop() if text and not text[-1].isspace() else (len(text), "")
+        words = [word for _, word in spans]
+        starts = [start for start, _ in spans] + [typed_start]
         reading = self._read(words)
         if reading.flag is None and len(reading.positional_words) < len(self.positionals):
             choices = self.positionals[len(reading.positional_words)].choices
@@ -110,12 +129,13 @@ class Grammar:
         if not reading.takes_another_word():
             return []
         try:
-            arguments = self.parse([*words, typed])
+            arguments = self._arguments(self._read([*words, typed]), completing=reading.flag)
         except CommandLineError:
             return []
         flag = reading.flag
         typed_value = " ".join([*reading.flag_words[flag.name], typed])
-        return [Completion(value, start_position=-len(typed_value)) for value in flag.complete(typed_value, arguments)]
+        start_position = starts[reading.flag_index + 1] - len(text)
+        return [Completion(value, start_position=start_position) for value in flag.complete(typed_value, arguments)]
 
     def _typed_positionals(self, reading: "_Reading") -> list[tuple[Positional, str]]:
         """Each positional with the word typed for it, for as many as the line has."""
@@ -133,9 +153,10 @@ class Grammar:
 
     def _read(self, words: list[str]) -> "_Reading":
         reading = _Reading()
-        for word in words:
+        for index, word in enumerate(words):
             if is_flag_token(word):
                 reading.flag = self._flag(word)
+                reading.flag_index = index
                 if reading.flag is None:
                     reading.unrecognized.append(word)
                 else:
@@ -149,6 +170,10 @@ class Grammar:
         return reading
 
 
+def invalid_choice(name: str, word: str, choices: Choices) -> CommandLineError:
+    return CommandLineError(f"argument {name}: invalid choice: {word!r} (choose from {describe(choices)})")
+
+
 def is_flag_token(word: str) -> bool:
     """Whether a word names a flag; a dash before a digit, as in -3, is a value."""
     return word.startswith(FLAG_PREFIX) and word[len(FLAG_PREFIX) : len(FLAG_PREFIX) + 1].isalpha()
@@ -156,12 +181,16 @@ def is_flag_token(word: str) -> bool:
 
 @dataclass
 class _Reading:
-    """The words of a line sorted into positionals, the values of each flag, and words no argument takes."""
+    """The words of a line sorted into positionals, the values of each flag, and words no argument takes.
+
+    flag is the flag whose value is being read at the end of the line, and flag_index its position among the words.
+    """
 
     positional_words: list[str] = field(default_factory=list)
     flag_words: dict[str, list[str]] = field(default_factory=dict)
     unrecognized: list[str] = field(default_factory=list)
     flag: Flag | None = None
+    flag_index: int = -1
 
     def takes_another_word(self) -> bool:
         """Whether the flag being read would take the next word as part of its value."""
