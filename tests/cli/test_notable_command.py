@@ -1,3 +1,5 @@
+import argparse
+
 import pytest
 from conftest import LAT, LONG, table_rows
 from fakes import Call, FakeEbirdClient, observation
@@ -31,8 +33,8 @@ def test_notable_passes_back_to_ebird(cli):
     assert cli.client.calls[0].back == "30"
 
 
-def test_notable_currently_fails_to_parse_a_species_flag(cli):
-    with pytest.raises(AttributeError):
+def test_notable_rejects_a_species_flag_as_an_invalid_argument(cli):
+    with pytest.raises(argparse.ArgumentError, match="unrecognized arguments: -species Harfang des neiges"):
         cli.run("notable nearby -species Harfang des neiges")
 
     assert cli.client.calls == []

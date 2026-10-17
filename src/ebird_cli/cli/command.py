@@ -46,6 +46,8 @@ class Command(Completer):
         processed_input = preprocess_input(" ".join(args).split())
         logger.debug(f"user input: {processed_input}")
         user_input = self.parser.parse_args(processed_input)
+        if user_input is None:
+            return
 
         kwargs: dict[str, any] = dict()
 
@@ -116,7 +118,7 @@ class Command(Completer):
             yield Completion(completion.text, start_position=start_position)
 
     def get_flag_value_completions(self, words, document: Document) -> Generator:
-        user_input = self.parser.parse_args(preprocess_input(words))
+        user_input = self.parser.try_parse_args(preprocess_input(words))
         if user_input is None:
             return
 
@@ -241,7 +243,7 @@ class RecentCommand(ObservationCommand):
                     self.location_service.get_region_ids_by_scope(args.region, args.scope), args.back
                 )
 
-        self.printing_service.print_recent(observations)
+        self.printing_service.print_observations(observations)
 
 
 class NotableCommand(ObservationCommand):
@@ -264,4 +266,4 @@ class NotableCommand(ObservationCommand):
                 self.location_service.get_region_ids_by_scope(args.region, args.scope), args.back
             )
 
-        self.printing_service.print_notable(observations)
+        self.printing_service.print_observations(observations)

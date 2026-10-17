@@ -13,18 +13,16 @@ class FakeEbirdClient:
     """In-memory stand-in for the eBird API client.
 
     Each keyword argument names a client method and gives its response: a value, or a callable
-    receiving the call's arguments. Every call is recorded with the `back`/`hotspot` settings
-    the client held at that moment.
+    receiving the call's positional arguments. Every call is recorded with the `back`/`hotspot`
+    settings it was made with.
     """
 
     def __init__(self, **responses):
         self.responses = responses
         self.calls: list[Call] = []
-        self.back = None
-        self.hotspot = None
 
-    def _respond(self, method, *args):
-        self.calls.append(Call(method, args, self.back, self.hotspot))
+    def _respond(self, method, *args, back=None, hotspot=None):
+        self.calls.append(Call(method, args, back, hotspot))
         response = self.responses.get(method, [])
         return response(*args) if callable(response) else response
 
@@ -40,23 +38,23 @@ class FakeEbirdClient:
     def get_national_species(self, country):
         return self._respond("get_national_species", country)
 
-    def get_observations(self, area):
-        return self._respond("get_observations", area)
+    def get_observations(self, area, back=None, hotspot=None):
+        return self._respond("get_observations", area, back=back, hotspot=hotspot)
 
-    def get_notable_observations(self, area):
-        return self._respond("get_notable_observations", area)
+    def get_notable_observations(self, area, back=None, hotspot=None):
+        return self._respond("get_notable_observations", area, back=back, hotspot=hotspot)
 
-    def get_species_observations(self, species, area):
-        return self._respond("get_species_observations", species, area)
+    def get_species_observations(self, species, area, back=None, hotspot=None):
+        return self._respond("get_species_observations", species, area, back=back, hotspot=hotspot)
 
-    def get_nearby_observations(self, lat, lng, dist=25):
-        return self._respond("get_nearby_observations", lat, lng, dist)
+    def get_nearby_observations(self, lat, lng, dist=25, back=None, hotspot=None):
+        return self._respond("get_nearby_observations", lat, lng, dist, back=back, hotspot=hotspot)
 
-    def get_nearby_notable(self, lat, lng, dist=25):
-        return self._respond("get_nearby_notable", lat, lng, dist)
+    def get_nearby_notable(self, lat, lng, dist=25, back=None, hotspot=None):
+        return self._respond("get_nearby_notable", lat, lng, dist, back=back, hotspot=hotspot)
 
-    def get_nearby_species(self, species, lat, lng, dist=25):
-        return self._respond("get_nearby_species", species, lat, lng, dist)
+    def get_nearby_species(self, species, lat, lng, dist=25, back=None, hotspot=None):
+        return self._respond("get_nearby_species", species, lat, lng, dist, back=back, hotspot=hotspot)
 
 
 def observation(com_name, obs_dt, loc_name="Parc de l'Île-Saint-Quentin", subnational2_name=None):

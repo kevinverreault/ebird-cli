@@ -14,12 +14,15 @@ def test_recent_nearby_requests_nearby_observations_at_configured_coordinates(cl
     assert cli.client.calls == [Call("get_nearby_observations", (LAT, LONG, 50), back="7", hotspot=True)]
 
 
-def test_recent_nearby_passes_unset_coordinates_through_as_none(make_cli):
-    cli = make_cli(lat=None, long=None)
+@pytest.mark.parametrize(("lat", "long"), [(None, None), (LAT, None), (None, LONG)])
+@pytest.mark.parametrize("line", ["recent nearby", "recent nearby -species Canard colvert", "notable nearby"])
+def test_nearby_without_coordinates_is_refused_without_calling_ebird(make_cli, lat, long, line):
+    cli = make_cli(lat=lat, long=long)
 
-    cli.run("recent nearby")
+    with pytest.raises(ValueError, match="--lat and --long"):
+        cli.run(line)
 
-    assert only_call(cli).args == (None, None, 50)
+    assert cli.client.calls == []
 
 
 def test_recent_regional_resolves_region_name_to_its_code(cli):
@@ -28,10 +31,10 @@ def test_recent_regional_resolves_region_name_to_its_code(cli):
     assert cli.client.calls == [Call("get_observations", (["CA-QC-MO"],), back="7", hotspot=True)]
 
 
-def test_recent_regional_currently_resolves_a_partial_name_to_every_matching_region(cli):
+def test_recent_regional_with_partial_name_requests_no_location(cli):
     cli.run("recent regional -region mont")
 
-    assert sorted(only_call(cli).args[0]) == ["CA-QC-MG", "CA-QC-MO"]
+    assert only_call(cli).args == ([],)
 
 
 def test_recent_subnational_resolves_subnational_name_to_its_code(cli):
@@ -40,10 +43,10 @@ def test_recent_subnational_resolves_subnational_name_to_its_code(cli):
     assert only_call(cli) == Call("get_observations", (["CA-QC"],), back="7", hotspot=True)
 
 
-def test_recent_subnational_currently_resolves_a_partial_name_to_every_matching_subnational(cli):
+def test_recent_subnational_with_partial_name_requests_no_location(cli):
     cli.run("recent subnational -region Nouv")
 
-    assert sorted(only_call(cli).args[0]) == ["CA-NB", "CA-NS"]
+    assert only_call(cli).args == ([],)
 
 
 def test_recent_hotspot_resolves_multi_word_hotspot_name_by_exact_match(cli):
@@ -122,11 +125,10 @@ def test_recent_back_out_of_range_defaults_to_7(cli, back):
     assert only_call(cli).back == "7"
 
 
-def test_recent_currently_raises_on_non_numeric_back(cli):
-    with pytest.raises(ValueError):
-        cli.run("recent regional -back trois")
+def test_recent_non_numeric_back_defaults_to_7(cli):
+    cli.run("recent regional -back trois")
 
-    assert cli.client.calls == []
+    assert only_call(cli).back == "7"
 
 
 def test_recent_keeps_only_the_latest_observation_per_species_oldest_first(make_cli, capsys):

@@ -50,7 +50,7 @@ class LocationService(DataFrameService):
 
     def get_subnational_id(self, subnational_name):
         return self.get_column(
-            self.search_by(self.location_cache.subnationals, EbirdFields.name, subnational_name), EbirdFields.code
+            self.get_by(self.location_cache.subnationals, EbirdFields.name, subnational_name), EbirdFields.code
         )
 
     def get_regions(self) -> list:
@@ -63,7 +63,7 @@ class LocationService(DataFrameService):
 
     def get_region_id(self, region_name: str) -> list:
         return self.get_column(
-            self.search_by(self.location_cache.subregionals, EbirdFields.name, region_name), EbirdFields.code
+            self.get_by(self.location_cache.subregionals, EbirdFields.name, region_name), EbirdFields.code
         )
 
     def get_hotspots(self) -> list:

@@ -107,7 +107,10 @@ class RegionScopeArgument(CommandArgument):
 
 class BackArgument(CommandArgument):
     back_arg = str(ArgumentNames.BACK.value)
-    days_back = [str(num) for num in list(range(1, 30))]
+    min_days_back = 1
+    max_days_back = 30
+    default_days_back = "7"
+    days_back = [str(num) for num in range(min_days_back, max_days_back + 1)]
 
     def get_flag_values(self, user_input, start_position) -> Generator:
         for completion in [day for day in self.days_back if user_input.back in day]:
@@ -126,7 +129,13 @@ class BackArgument(CommandArgument):
         return False
 
     def get_keywords(self, user_input):
-        return {self.back_arg: str(user_input.back) if user_input.back and 1 <= int(user_input.back) <= 30 else "7"}
+        return {self.back_arg: user_input.back if self.is_valid_days_back(user_input.back) else self.default_days_back}
+
+    def is_valid_days_back(self, back: str | None) -> bool:
+        try:
+            return self.min_days_back <= int(back) <= self.max_days_back
+        except (TypeError, ValueError):
+            return False
 
     def supports_flag_argument_completion(self, arg_name: str):
         return arg_name == flag_arg_name(self.back_arg)
