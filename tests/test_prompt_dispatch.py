@@ -63,14 +63,28 @@ def test_known_command_is_dispatched_with_its_arguments(make_cli, capsys):
     assert table_rows(capsys.readouterr().out) == [["2026-10-14", "Geai bleu", "Parc de l'Île-Saint-Quentin"]]
 
 
-def test_command_error_is_reported_without_ending_the_session(cli, capsys):
-    assert handle_input("recent nearby -back trois", cli.commands, PROGRAM_ARGS) is True
-    assert capsys.readouterr().out == "An error occurred: invalid literal for int() with base 10: 'trois'\n"
+def test_command_error_is_reported_without_ending_the_session(make_cli, capsys):
+    cli = make_cli(lat=None, long=None)
+
+    assert handle_input("recent nearby", cli.commands, PROGRAM_ARGS) is True
+    assert capsys.readouterr().out == (
+        "An error occurred: nearby needs coordinates: set --lat and --long, or EBIRDLAT and EBIRDLONG\n"
+    )
 
 
-def test_unparseable_command_line_is_currently_reported_as_an_attribute_error(cli, capsys):
+def test_invalid_scope_is_reported_as_invalid_argument(cli, capsys):
     assert handle_input("recent everywhere", cli.commands, PROGRAM_ARGS) is True
-    assert capsys.readouterr().out == "An error occurred: 'NoneType' object has no attribute 'scope'\n"
+    assert capsys.readouterr().out == (
+        "Invalid argument: argument scope: invalid choice: 'everywhere' "
+        "(choose from 'hotspot', 'nearby', 'regional', 'subnational')\n"
+    )
+    assert cli.client.calls == []
+
+
+def test_missing_scope_is_reported_as_invalid_argument(cli, capsys):
+    assert handle_input("recent -back 3", cli.commands, PROGRAM_ARGS) is True
+    assert capsys.readouterr().out == "Invalid argument: the following arguments are required: scope\n"
+    assert cli.client.calls == []
 
 
 def test_argument_error_is_reported_as_invalid_argument(capsys):

@@ -85,11 +85,12 @@ def test_resolve_region_name_gives_its_code(tmp_path):
     assert catalogue.resolve(RegionalScopes.SUBNATIONAL, "Québec") == ["CA-QC"]
 
 
-def test_resolve_currently_gives_every_region_whose_name_contains_a_partial_name(tmp_path):
+def test_resolve_region_needs_the_exact_name(tmp_path):
     catalogue = load_catalogue(tmp_path)
 
-    assert catalogue.resolve(RegionalScopes.REGIONAL, "mont") == ["CA-QC-MG", "CA-QC-MO"]
-    assert catalogue.resolve(RegionalScopes.SUBNATIONAL, "Nouv") == ["CA-NB", "CA-NS"]
+    assert catalogue.resolve(RegionalScopes.REGIONAL, "mont") == []
+    assert catalogue.resolve(RegionalScopes.REGIONAL, "montréal") == []
+    assert catalogue.resolve(RegionalScopes.SUBNATIONAL, "Nouv") == []
 
 
 def test_resolve_hotspot_needs_the_exact_name(tmp_path):

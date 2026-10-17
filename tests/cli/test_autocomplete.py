@@ -121,11 +121,11 @@ def test_species_values_match_national_taxonomy_case_insensitively_by_substring(
 
 
 def test_back_values_match_days_containing_what_was_typed(cli):
-    assert cli.completions("recent regional -back 3") == ["3", "13", "23"]
+    assert cli.completions("recent regional -back 3") == ["3", "13", "23", "30"]
 
 
-def test_back_values_currently_stop_at_29_although_30_is_accepted(cli):
-    assert cli.completions("recent regional -back ") == [str(day) for day in range(1, 30)]
+def test_back_values_offer_every_accepted_day_from_1_to_30(cli):
+    assert cli.completions("recent regional -back ") == [str(day) for day in range(1, 31)]
 
 
 @pytest.mark.parametrize("text", ["bogus ", "bogus x"])

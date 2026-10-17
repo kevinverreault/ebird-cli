@@ -83,31 +83,12 @@ class LocationCatalogue:
 
     def names(self, scope: RegionalScopes, query: str = "") -> list[str]:
         """Names of the scope's Locations containing the query, ignoring case; nearby has none."""
-        return [name for name, _ in self.locations.get(scope, []) if contains(name, query)]
+        return [name for name, _ in self.locations.get(scope, []) if query.lower() in name.lower()]
 
     def resolve(self, scope: RegionalScopes, name: str | None = None) -> list[str]:
-        """Location ids the name stands for in the scope; no name means the Home Region at that scope."""
+        """Location ids of the scope's Locations with exactly this name; no name means the Home Region at that scope."""
         if scope not in self.locations:
             raise ValueError(f"{scope} is not a scope of named Locations")
         if name is None:
             return [self.home_codes[scope]]
-        matches = MATCH_POLICY[scope]
-        return [
-            location_id for candidate, ids in self.locations[scope] if matches(candidate, name) for location_id in ids
-        ]
-
-
-def contains(candidate: str, name: str) -> bool:
-    return name.lower() in candidate.lower()
-
-
-def equals(candidate: str, name: str) -> bool:
-    return candidate == name
-
-
-# How a typed name picks Locations: Regions by partial name, Hotspots and Aggregations only by their exact name.
-MATCH_POLICY = {
-    RegionalScopes.SUBNATIONAL: contains,
-    RegionalScopes.REGIONAL: contains,
-    RegionalScopes.HOTSPOT: equals,
-}
+        return [location_id for candidate, ids in self.locations[scope] if candidate == name for location_id in ids]
