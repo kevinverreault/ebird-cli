@@ -11,13 +11,7 @@ class PrintingService(DataFrameService):
         self.year_list = self.get_dataframe(year_list) if year_list else None
         self.console = console or Console()
 
-    def print_notable(self, notable_observations: list):
-        self.print_observations(notable_observations, lambda obs: obs.location)
-
-    def print_recent(self, recent_observations: list):
-        self.print_observations(recent_observations, lambda obs: obs.location)
-
-    def print_observations(self, observations, location):
+    def print_observations(self, observations: list):
         table = Table()
 
         table.add_column("Date", style="magenta")
@@ -31,7 +25,7 @@ class PrintingService(DataFrameService):
             table.add_column("Region")
 
         for observation in observations:
-            row = (observation.observation_date, self.get_observation_text(observation), location(observation))
+            row = (observation.observation_date, self.get_observation_text(observation), observation.location)
             if show_region:
                 row += (observation.subname,)
             table.add_row(*row)
