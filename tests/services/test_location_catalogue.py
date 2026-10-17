@@ -1,8 +1,10 @@
 import json
-import shutil
+import os
+import time
+from urllib.error import HTTPError, URLError
 
 import pytest
-from conftest import FIXTURES
+from conftest import FIXTURES, copy_fixture_cache
 from fakes import FakeEbirdClient
 
 from ebird_cli.domain.region import Region
@@ -21,7 +23,7 @@ HOTSPOT_NAMES = [
 
 def load_catalogue(tmp_path, client=None, aggregations=None) -> LocationCatalogue:
     cache_dir = tmp_path / "cache"
-    shutil.copytree(FIXTURES / "cache", cache_dir, dirs_exist_ok=True)
+    copy_fixture_cache(cache_dir)
     return LocationCatalogue.load(Region("CA-QC-MR"), client or FakeEbirdClient(), str(cache_dir), aggregations)
 
 
@@ -165,6 +167,15 @@ def test_load_fetches_the_home_region_locations_from_ebird_when_nothing_is_cache
     assert catalogue.resolve(RegionalScopes.HOTSPOT, "Parc de l'Île-Saint-Quentin") == ["L2001"]
 
 
+def test_load_asks_ebird_for_every_hotspot_not_only_recently_visited_ones(tmp_path):
+    client = fetching_client()
+
+    LocationCatalogue.load(Region("CA-QC-MR"), client, str(tmp_path))
+
+    [hotspots_call] = [call for call in client.calls if call.method == "get_hotspots"]
+    assert hotspots_call.back is None
+
+
 def test_load_reuses_what_an_earlier_load_cached_without_calling_ebird(tmp_path):
     LocationCatalogue.load(Region("CA-QC-MR"), fetching_client(), str(tmp_path))
     client = fetching_client()
@@ -173,6 +184,62 @@ def test_load_reuses_what_an_earlier_load_cached_without_calling_ebird(tmp_path)
 
     assert client.calls == []
     assert catalogue.names(RegionalScopes.HOTSPOT) == ["Parc de l'Île-Saint-Quentin"]
+
+
+def backdate(file_path, days):
+    """Backdate the file's modification time by this many days."""
+    modified = time.time() - days * 24 * 60 * 60
+    os.utime(file_path, (modified, modified))
+
+
+def test_load_refetches_hotspots_cached_more_than_30_days_ago(tmp_path):
+    LocationCatalogue.load(Region("CA-QC-MR"), fetching_client(), str(tmp_path))
+    backdate(tmp_path / "location" / "CA" / "CA-QC" / "hotspots.json", days=31)
+    client = FakeEbirdClient(
+        get_hotspots=[{"locId": "L2002", "locName": "Nouveau sentier", "subnational2Code": "CA-QC-MR"}]
+    )
+
+    catalogue = LocationCatalogue.load(Region("CA-QC-MR"), client, str(tmp_path))
+
+    assert [(call.method, call.args) for call in client.calls] == [("get_hotspots", ("CA-QC",))]
+    assert catalogue.names(RegionalScopes.HOTSPOT) == ["Nouveau sentier"]
+
+    reloaded = LocationCatalogue.load(Region("CA-QC-MR"), FakeEbirdClient(), str(tmp_path))
+    assert reloaded.names(RegionalScopes.HOTSPOT) == ["Nouveau sentier"]
+
+
+def test_load_reuses_regions_however_long_ago_they_were_cached(tmp_path):
+    LocationCatalogue.load(Region("CA-QC-MR"), fetching_client(), str(tmp_path))
+    backdate(tmp_path / "location" / "CA" / "subnationals.json", days=365)
+    backdate(tmp_path / "location" / "CA" / "CA-QC" / "regionals.json", days=365)
+    client = fetching_client()
+
+    LocationCatalogue.load(Region("CA-QC-MR"), client, str(tmp_path))
+
+    assert client.calls == []
+
+
+def test_load_keeps_expired_hotspots_when_ebird_cannot_be_reached(tmp_path):
+    LocationCatalogue.load(Region("CA-QC-MR"), fetching_client(), str(tmp_path))
+    backdate(tmp_path / "location" / "CA" / "CA-QC" / "hotspots.json", days=31)
+
+    def unreachable(_region):
+        raise URLError("no connection")
+
+    catalogue = LocationCatalogue.load(Region("CA-QC-MR"), FakeEbirdClient(get_hotspots=unreachable), str(tmp_path))
+
+    assert catalogue.names(RegionalScopes.HOTSPOT) == ["Parc de l'Île-Saint-Quentin"]
+
+
+def test_load_reports_ebird_refusing_the_hotspots_request_even_when_expired_ones_are_cached(tmp_path):
+    LocationCatalogue.load(Region("CA-QC-MR"), fetching_client(), str(tmp_path))
+    backdate(tmp_path / "location" / "CA" / "CA-QC" / "hotspots.json", days=31)
+
+    def forbidden(_region):
+        raise HTTPError("https://api.ebird.org/v2/ref/hotspot/CA-QC", 403, "Forbidden", None, None)
+
+    with pytest.raises(HTTPError):
+        LocationCatalogue.load(Region("CA-QC-MR"), FakeEbirdClient(get_hotspots=forbidden), str(tmp_path))
 
 
 def test_load_fetches_only_the_hotspots_when_they_alone_are_missing_from_the_cache(tmp_path):
