@@ -96,14 +96,15 @@ def test_hotspot_region_values_filter_hotspots_and_aggregations(cli):
     assert cli.completions("recent hotspot -region tech") == ["Technoparc--Étang Hertel", "Technoparc"]
 
 
-def test_multi_word_region_value_completion_replaces_every_word_typed_after_the_flag(cli):
-    text = "recent hotspot -region Dunes de"
+@pytest.mark.parametrize("typed", ["Dunes de", "Dunes  de"])
+def test_multi_word_region_value_completion_replaces_every_word_typed_after_the_flag(cli, typed):
+    text = f"recent hotspot -region {typed}"
 
     completions = list(cli.completer.get_completions(Document(text, len(text)), CompleteEvent()))
 
     assert [(completion.text, completion.start_position) for completion in completions] == [
-        ("Dunes de Tadoussac", -len("Dunes de")),
-        ("Dunes de Tadoussac--Halte", -len("Dunes de")),
+        ("Dunes de Tadoussac", -len(typed)),
+        ("Dunes de Tadoussac--Halte", -len(typed)),
     ]
 
 

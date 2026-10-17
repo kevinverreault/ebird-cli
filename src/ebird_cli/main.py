@@ -14,6 +14,7 @@ from prompt_toolkit.styles import Style
 
 from .cli.autocomplete import ContextSensitiveCompleter
 from .cli.command import NotableCommand, RecentCommand
+from .cli.grammar import CommandLineError
 from .domain.region import Region
 from .services.cache import CacheService
 from .services.ebird_client import EbirdClient
@@ -233,7 +234,7 @@ def handle_input(user_input: str, commands, program_args) -> bool:
             user_request.handle_command(*command_args)
         else:
             print("Unknown command.")
-    except argparse.ArgumentError as e:
+    except CommandLineError as e:
         print(f"Invalid argument: {e.message}")
     except Exception as e:
         print(f"An error occurred: {e}")
