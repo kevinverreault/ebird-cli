@@ -84,20 +84,20 @@ class RegionScopeArgument(CommandArgument):
 
     def get_excluded_flags(self, words) -> list:
         positional_words = [w for w in words if not w.startswith(FLAG)]
-        if positional_words and positional_words[0] == RegionalScopes.NEARBY.value:
+        if positional_words and positional_words[0] == RegionalScopes.NEARBY:
             return [flag_arg_name(self.region_arg)]
         return []
 
     def get_region_completions(self, scope, region) -> list:
-        if scope == RegionalScopes.SUBNATIONAL.value:
+        if scope == RegionalScopes.SUBNATIONAL:
             return (
                 self.location_service.get_subnationals()
                 if region == ""
                 else self.location_service.search_subnationals(region)
             )
-        elif scope == RegionalScopes.REGIONAL.value:
+        elif scope == RegionalScopes.REGIONAL:
             return self.location_service.get_regions() if region == "" else self.location_service.search_regions(region)
-        elif scope == RegionalScopes.HOTSPOT.value:
+        elif scope == RegionalScopes.HOTSPOT:
             return (
                 self.location_service.get_hotspots() if region == "" else self.location_service.search_hotspots(region)
             )

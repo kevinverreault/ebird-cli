@@ -90,11 +90,11 @@ class LocationService(DataFrameService):
     def get_region_ids_by_scope(self, region_name: str | None, scope: RegionalScopes) -> list:
         regions = []
         if region_name is not None:
-            if scope == RegionalScopes.SUBNATIONAL.value:
+            if scope == RegionalScopes.SUBNATIONAL:
                 regions = self.get_subnational_id(region_name)
-            elif scope == RegionalScopes.REGIONAL.value:
+            elif scope == RegionalScopes.REGIONAL:
                 regions = self.get_region_id(region_name)
-            elif scope == RegionalScopes.HOTSPOT.value:
+            elif scope == RegionalScopes.HOTSPOT:
                 regions = self.get_hotspot_ids(region_name)
         else:
             regions.append(self.get_default_by_scope(scope))
@@ -104,6 +104,6 @@ class LocationService(DataFrameService):
     def get_default_by_scope(self, scope: RegionalScopes):
         return (
             self.location_cache.region.subnational
-            if scope == RegionalScopes.SUBNATIONAL.value
+            if scope == RegionalScopes.SUBNATIONAL
             else self.location_cache.region.regional
         )

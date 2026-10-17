@@ -227,14 +227,14 @@ class RecentCommand(ObservationCommand):
             if not species_codes:
                 return
             species_code = species_codes[0]
-            if args.scope == RegionalScopes.NEARBY.value:
+            if args.scope == RegionalScopes.NEARBY:
                 observations = self.observation_service.get_nearby_species_observations(species_code, args.back)
             else:
                 observations = self.observation_service.get_species_observations(
                     self.location_service.get_region_ids_by_scope(args.region, args.scope), species_code, args.back
                 )
         else:
-            if args.scope == RegionalScopes.NEARBY.value:
+            if args.scope == RegionalScopes.NEARBY:
                 observations = self.observation_service.get_nearby_recent_observations(args.back)
             else:
                 observations = self.observation_service.get_recent_observations(
@@ -257,7 +257,7 @@ class NotableCommand(ObservationCommand):
         self.description = "Retrieve notable observations for the specified region"
 
     def handle_observation(self, args: ObservationCommandArgs):
-        if args.scope == RegionalScopes.NEARBY.value:
+        if args.scope == RegionalScopes.NEARBY:
             observations = self.observation_service.get_nearby_notable_observations(args.back)
         else:
             observations = self.observation_service.get_notable_observations(
