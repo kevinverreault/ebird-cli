@@ -5,7 +5,9 @@ import os
 from ..domain.fields import EbirdFields
 from ..domain.region import Region
 from ..domain.regional_scopes import RegionalScopes
-from .cache import LOCATION_DIR, write_csv
+from .cache import write_csv
+
+LOCATION_DIR = "location"
 
 
 def read_csv(file_path) -> list[dict]:

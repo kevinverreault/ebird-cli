@@ -5,12 +5,10 @@ import pandas as pd
 from appdirs import user_cache_dir
 
 from ..domain.fields import EbirdFields
-from ..domain.location_cache import LocationCache
 from ..domain.region import Region
 from ..domain.taxonomy_cache import TaxonomyCache
 from .ebird_client import EbirdClient
 
-LOCATION_DIR = "location"
 TAXONOMY_DIR = "taxonomy"
 
 
@@ -33,44 +31,9 @@ class CacheService:
         self.api_client = api_client or EbirdClient(api_key, locale)
         self.cache_dir = cache_dir or user_cache_dir("ebird_cli")
 
-        os.makedirs(self.cache_dir, exist_ok=True)
-        os.makedirs(os.path.join(self.cache_dir, LOCATION_DIR, region.national), exist_ok=True)
-        os.makedirs(
-            os.path.join(self.cache_dir, LOCATION_DIR, region.national, region.subnational),
-            exist_ok=True,
-        )
-
-        national_subregions_path = os.path.join(self.cache_dir, LOCATION_DIR, region.national, "subregions.csv")
-        subnational_subregions_path = os.path.join(
-            self.cache_dir,
-            LOCATION_DIR,
-            region.national,
-            region.subnational,
-            "subregions.csv",
-        )
-        subnational_hotspots_path = os.path.join(
-            self.cache_dir, LOCATION_DIR, region.national, region.subnational, "hotspots.csv"
-        )
-
-        if not os.path.exists(national_subregions_path):
-            subnationals = self.api_client.get_regions("subnational1", region.national)
-            write_csv(national_subregions_path, subnationals)
-
-        if not os.path.exists(subnational_subregions_path):
-            subregionals = self.api_client.get_regions("subnational2", region.subnational)
-            hotspots = self.api_client.get_hotspots(region.subnational)
-            write_csv(subnational_subregions_path, subregionals)
-            write_csv(subnational_hotspots_path, hotspots)
-
         national_taxonomy_path = self.get_taxonomy(region)
 
         self.taxonomy_cache = TaxonomyCache(region, national_taxonomy_path)
-        self.location_cache = LocationCache(
-            region,
-            national_subregions_path,
-            subnational_subregions_path,
-            subnational_hotspots_path,
-        )
 
     def get_taxonomy(self, region: Region) -> str:
         taxonomy_path = os.path.join(self.cache_dir, TAXONOMY_DIR, "taxonomy.csv")

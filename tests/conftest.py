@@ -15,7 +15,7 @@ from ebird_cli.domain.region import Region
 from ebird_cli.services import cache as cache_module
 from ebird_cli.services import observation as observation_module
 from ebird_cli.services.cache import CacheService
-from ebird_cli.services.location import LocationService
+from ebird_cli.services.location_catalogue import LocationCatalogue
 from ebird_cli.services.observation import ObservationService
 from ebird_cli.services.printing import PrintingService
 from ebird_cli.services.taxonomy import TaxonomyService
@@ -71,7 +71,7 @@ class Cli:
     client: FakeEbirdClient
     commands: dict
     completer: ContextSensitiveCompleter
-    location_service: LocationService
+    location_catalogue: LocationCatalogue
     taxonomy_service: TaxonomyService
 
     def run(self, line: str):
@@ -96,17 +96,17 @@ def make_cli(tmp_path):
         observation_service = ObservationService("api-key", "fr", lat, long, api_client=client)
         console = Console(force_terminal=True, color_system="standard", width=200, legacy_windows=False)
         printing_service = PrintingService(life_list, year_list, console=console)
-        location_service = LocationService(cache_service.location_cache, aggregations)
+        location_catalogue = LocationCatalogue.load(Region(REGION), client, str(cache_dir), aggregations)
         taxonomy_service = TaxonomyService(cache_service.taxonomy_cache)
 
         commands = {
             command.command_name: command
             for command in [
-                RecentCommand(observation_service, location_service, printing_service, taxonomy_service),
-                NotableCommand(observation_service, location_service, printing_service),
+                RecentCommand(observation_service, location_catalogue, printing_service, taxonomy_service),
+                NotableCommand(observation_service, location_catalogue, printing_service),
             ]
         }
-        return Cli(client, commands, ContextSensitiveCompleter(commands.values()), location_service, taxonomy_service)
+        return Cli(client, commands, ContextSensitiveCompleter(commands.values()), location_catalogue, taxonomy_service)
 
     return make
 
