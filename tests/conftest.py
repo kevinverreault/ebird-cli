@@ -13,10 +13,9 @@ from ebird_cli.cli.autocomplete import ContextSensitiveCompleter
 from ebird_cli.cli.command import NotableCommand, RecentCommand
 from ebird_cli.domain.region import Region
 from ebird_cli.services import cache as cache_module
-from ebird_cli.services import observation as observation_module
 from ebird_cli.services.cache import CacheService
 from ebird_cli.services.location_catalogue import LocationCatalogue
-from ebird_cli.services.observation import ObservationService
+from ebird_cli.services.observation_query import ObservationQuery
 from ebird_cli.services.printing import PrintingService
 from ebird_cli.services.taxonomy import TaxonomyService
 
@@ -38,7 +37,6 @@ def offline_and_isolated(monkeypatch):
 
     monkeypatch.setattr(cache_module, "user_cache_dir", forbidden)
     monkeypatch.setattr(cache_module, "EbirdClient", forbidden)
-    monkeypatch.setattr(observation_module, "EbirdClient", forbidden)
 
 
 def strip_ansi(text: str) -> str:
@@ -93,17 +91,17 @@ def make_cli(tmp_path):
         shutil.copytree(FIXTURES / "cache", cache_dir, dirs_exist_ok=True)
 
         cache_service = CacheService("api-key", "fr", Region(REGION), api_client=client, cache_dir=str(cache_dir))
-        observation_service = ObservationService("api-key", "fr", lat, long, api_client=client)
         console = Console(force_terminal=True, color_system="standard", width=200, legacy_windows=False)
         printing_service = PrintingService(life_list, year_list, console=console)
         location_catalogue = LocationCatalogue.load(Region(REGION), client, str(cache_dir), aggregations)
+        observation_query = ObservationQuery(client, location_catalogue, lat, long)
         taxonomy_service = TaxonomyService(cache_service.taxonomy_cache)
 
         commands = {
             command.command_name: command
             for command in [
-                RecentCommand(observation_service, location_catalogue, printing_service, taxonomy_service),
-                NotableCommand(observation_service, location_catalogue, printing_service),
+                RecentCommand(observation_query, location_catalogue, printing_service, taxonomy_service),
+                NotableCommand(observation_query, location_catalogue, printing_service),
             ]
         }
         return Cli(client, commands, ContextSensitiveCompleter(commands.values()), location_catalogue, taxonomy_service)
