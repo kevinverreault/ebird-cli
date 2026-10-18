@@ -4,7 +4,7 @@ import pytest
 from fakes import ENTER, ScriptedAsk
 
 from ebird_cli import settings as settings_module
-from ebird_cli.settings import SettingsFile, run_setup
+from ebird_cli.settings import SettingsError, SettingsFile, run_setup
 
 LABELS = [
     "eBird API key",
@@ -103,3 +103,16 @@ def test_settings_file_lives_in_the_user_config_directory(tmp_path, monkeypatch)
     monkeypatch.setattr(settings_module, "user_config_dir", lambda appname: str(tmp_path / "config" / appname))
 
     assert SettingsFile().path == tmp_path / "config" / "ebird_cli" / "settings.json"
+
+
+@pytest.mark.parametrize(
+    "saved_text",
+    ["not json", '["typed-key"]', '{"api_key": "typed-key", "lat": 46.35}'],
+    ids=["invalid json", "not an object", "not a text value"],
+)
+def test_unreadable_saved_settings_are_reported_as_a_settings_error(tmp_path, saved_text):
+    path = tmp_path / "settings.json"
+    path.write_text(saved_text, encoding="utf-8")
+
+    with pytest.raises(SettingsError, match="settings.json"):
+        SettingsFile(path).load()

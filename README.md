@@ -36,7 +36,7 @@ The eBird API key and the Home Region are required, but the saved settings alway
 
 ### First-launch setup
 
-The first time `ebird-cli` starts without saved settings, it asks for each setting before it contacts eBird: eBird API key, Home Region, locale, latitude, longitude, year list path, life list path and aggregations path. Each answer is pre-filled with the value a command-line argument or environment variable already gives it, so press Enter to keep it. The API key and the Home Region (a subnational level 2 code like `CA-QC-MR`) are required; leave any other setting empty with Enter. Interrupting setup with Ctrl+C or Ctrl+D saves nothing, and setup starts again on the next launch.
+The first time `ebird-cli` starts without saved settings, it asks for each setting before it contacts eBird: eBird API key, Home Region, locale, latitude, longitude, year list path, life list path and aggregations path. Each answer is pre-filled with the value a command-line argument or environment variable already gives it, so press Enter to keep it. The API key and the Home Region (a subnational level 2 code like `CA-QC-MR`) are required; leave any other setting empty with Enter. Interrupting setup with Ctrl+C (or Ctrl+D on an empty answer) saves nothing, and setup starts again on the next launch.
 
 The answers are saved to `settings.json` in the platform-appropriate user config directory, and every later launch reads them without asking again:
 
@@ -54,7 +54,7 @@ Run `ebird-cli settings` to change the saved settings at any time:
 ebird-cli settings
 ```
 
-It asks the same questions as first-launch setup, pre-filled with the saved settings, then overwrites them and exits; the next `ebird-cli` launch uses the new values. It never contacts eBird, so it also fixes a wrong saved API key or Home Region. Ctrl+C or Ctrl+D leaves the saved settings untouched. Because environment variables outrank saved settings, it names each saved setting that an environment variable you have set overrides.
+It asks the same questions as first-launch setup, pre-filled with the saved settings, then overwrites them and exits; the next `ebird-cli` launch uses the new values. It never contacts eBird, so it also fixes a wrong saved API key or Home Region. Ctrl+C (or Ctrl+D on an empty answer) leaves the saved settings untouched. Because environment variables outrank saved settings, it names each saved setting that an environment variable you have set overrides.
 
 ### Command-Line Arguments
 
@@ -102,7 +102,7 @@ When launched, the CLI will display a menu of available commands:
 
 - `recent <scope, -region> [-back, -species]`: Fetch recent bird observations
 - `notable <scope, -region> [-back]`: Fetch notable bird observations
-- `settings`: Change the saved settings without leaving the prompt, as [`ebird-cli settings`](#changing-settings) does. The running session keeps its settings; the changes apply on the next launch. Ctrl+C or Ctrl+D returns to the prompt with the saved settings untouched.
+- `settings`: Change the saved settings without leaving the prompt, as [`ebird-cli settings`](#changing-settings) does. The running session keeps its settings; the changes apply on the next launch. Ctrl+C (or Ctrl+D on an empty answer) returns to the prompt with the saved settings untouched.
 
 ### Autocompletion
 
@@ -205,14 +205,14 @@ This requires a valid eBird session cookie (`EBIRD_SESSIONID`), which can be obt
 
 ## Data cache
 
-To avoid redundant API calls to eBird, the CLI caches reference data locally on first run. The cache is stored in the platform-appropriate user cache directory (e.g. `%LOCALAPPDATA%\ebird_cli\Cache\ebird_cli` on Windows, `~/.cache/ebird_cli` on Linux/macOS).
+To avoid redundant API calls to eBird, the CLI caches reference data locally on first run. The cache is stored in the platform-appropriate user cache directory (e.g. `%LOCALAPPDATA%\ebird_cli\ebird_cli\Cache` on Windows, `~/.cache/ebird_cli` on Linux/macOS).
 
 The following data is cached:
 
 - **Location data** (per region): subnational level 1 regions, subnational level 2 regions, and every hotspot in the subnational region — stored as JSON files under `location/<national>/` and `location/<national>/<subnational>/`
 - **Taxonomy** (per locale and national region): the full eBird taxonomy filtered to species observed in the configured country — stored as CSV files under `taxonomy/<national>/`
 
-Hotspots are fetched again on launch once their cached file is more than 30 days old, so new hotspots appear; if eBird can't be reached, the older file is used. All other cached data is written once and reused on every subsequent launch. To force a refresh (e.g. after a new eBird taxonomy release or a region change), delete the relevant files or the entire cache directory; your saved settings live elsewhere and are kept.
+Hotspots are fetched again on launch once their cached file is more than 30 days old, so new hotspots appear; if eBird can't be reached, the older file is used. All other cached data is written once and reused on every subsequent launch. To force a refresh (e.g. after a new eBird taxonomy release or a region change), delete the relevant files or the entire cache directory; your saved settings live outside it and are kept (on Windows, delete the `Cache` folder, not its parent, which holds `settings.json`).
 
 ## Log file
 
