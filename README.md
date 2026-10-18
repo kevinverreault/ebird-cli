@@ -2,7 +2,7 @@
 
 A command-line interface for exploring eBird bird observation data.
 
-![Notable observations in a region, with life and year list targets highlighted](docs/demo/overview.gif)
+![Notable observations in a region, with life and year list targets highlighted](https://raw.githubusercontent.com/kevinverreault/ebird-cli/main/docs/demo/overview.gif)
 
 ## Prerequisites
 
@@ -70,7 +70,7 @@ When launched, the CLI will display a menu of available commands:
 
 Suggestions appear as you type: command names, scopes, flags, region names for the chosen scope, species names and `-back` values. Press Tab to accept the first suggestion, or press it again to cycle through them.
 
-![Building a full command from autocompletion suggestions](docs/demo/autocomplete.gif)
+![Building a full command from autocompletion suggestions](https://raw.githubusercontent.com/kevinverreault/ebird-cli/main/docs/demo/autocomplete.gif)
 
 ### Search Scopes
 
@@ -92,7 +92,7 @@ Bird observations can be searched in multiple scopes.
 
 The `-region` flag supports context-sensitive autocompletion based on the selected scope. If no `-region` flag is provided, default region will be used.
 
-![Autocompleting a hotspot name and fetching its recent observations](docs/demo/hotspot-autocomplete.gif)
+![Autocompleting a hotspot name and fetching its recent observations](https://raw.githubusercontent.com/kevinverreault/ebird-cli/main/docs/demo/hotspot-autocomplete.gif)
 
 ### Search length
 
@@ -142,7 +142,7 @@ recent regional -region Montréal -species Harfang des neiges
 
 The `-species` flag supports context-sensitive autocompletion using the cached taxonomy. Start typing a common name and press Tab to see matching species.
 
-![Autocompleting a species name and filtering recent observations to it](docs/demo/species-filter.gif)
+![Autocompleting a species name and filtering recent observations to it](https://raw.githubusercontent.com/kevinverreault/ebird-cli/main/docs/demo/species-filter.gif)
 
 > **Note:** Autocompletion and lookup use the locale specified by `--locale` / `EBIRDLOCALE`. Species names must be typed in the configured locale.
 
