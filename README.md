@@ -4,14 +4,17 @@ A command-line interface for exploring eBird bird observation data.
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.11+
 - eBird API Key (obtainable with free eBird account)
 
 ## Installation
 
 1. Clone the repository
 2. Set up a virtual environment
-3. Install dependencies
+3. Install the `ebird-cli` command from the checkout:
+   ```bash
+   pip install .
+   ```
 4. Configure your eBird API key
 
 ## Configuration
@@ -49,8 +52,10 @@ You can configure the CLI using the following environment variables to avoid man
 ### Launching the CLI
 
 ```bash
-python -m ebird_cli.main --api-key <ebird-api-key> --region <region-code> [optional arguments]
+ebird-cli --api-key <ebird-api-key> --region <region-code> [optional arguments]
 ```
+
+`ebird-cli --version` prints the installed version.
 
 ### Available Commands
 
@@ -97,7 +102,7 @@ Aggregations allow you to define custom named groups of hotspots that appear alo
 Provide the path to your aggregations file via `--aggregations` or the `EBIRDAGGREGATIONS` environment variable:
 
 ```bash
-python -m ebird_cli.main --api-key <key> --region <region> --aggregations ~/ebird_data/aggregations.json
+ebird-cli --api-key <key> --region <region> --aggregations ~/ebird_data/aggregations.json
 ```
 
 The aggregations file is a JSON array where each element maps a custom name to a list of eBird location IDs:
@@ -167,10 +172,11 @@ Hotspots are fetched again on launch once their cached file is more than 30 days
    - On Windows: `venv\Scripts\activate`
    - On macOS/Linux: `source venv/bin/activate`
 
-2. Install dependencies (`requirements-dev.txt` adds the test tools to the runtime dependencies):
+2. Install the project in editable mode with the dev tools (`requirements-dev.txt` adds the test, lint and build tools to the pinned runtime dependencies):
    ```bash
-   pip install -r requirements-dev.txt
+   pip install -e . -r requirements-dev.txt
    ```
+   The tests read the version from the installed package, so they need this editable install.
 
 ### Tests
 
