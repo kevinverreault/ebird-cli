@@ -121,7 +121,7 @@ def test_api_key_and_region_are_optional_with_their_environment_variables(monkey
 
 
 def test_version_prints_the_version_declared_in_pyproject(capsys):
-    """Needs the package installed (pip install -e .): the version is read from its metadata."""
+    # Needs the package installed (pip install -e .): the version is read from its metadata
     with (Path(__file__).parent.parent / "pyproject.toml").open("rb") as pyproject:
         declared_version = tomllib.load(pyproject)["project"]["version"]
 

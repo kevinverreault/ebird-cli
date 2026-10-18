@@ -20,7 +20,7 @@ jobs:
 
       # Install the build version pinned in requirements-dev.txt so CI matches local runs
       - name: Install build
-        run: pip install "$(grep '^build' requirements-dev.txt)"
+        run: pip install "$(grep '^build~=' requirements-dev.txt)"
 
       - name: Build sdist and wheel
         run: python -m build
