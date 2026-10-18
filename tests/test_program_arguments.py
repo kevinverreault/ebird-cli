@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from ebird_cli.main import setup_parser
+from ebird_cli.main import read_settings, setup_parser
 
 ENV_VARIABLES = {
     "EBIRDAPIKEY": "env-key",
@@ -24,11 +24,11 @@ def no_ebird_env(monkeypatch):
         monkeypatch.delenv(name, raising=False)
 
 
-def parse(*argv):
-    """Build the parser after the environment is set: defaults and required are read at setup time."""
+def parse(*argv, saved=None):
+    """The settings a launch with argv resolves, from the environment as the test set it and saved settings."""
     parser = argparse.ArgumentParser()
     setup_parser(parser)
-    return parser.parse_args(list(argv))
+    return read_settings(parser, parser.parse_args(list(argv)), saved)
 
 
 def test_reads_every_option_from_flags():
@@ -109,6 +109,13 @@ def test_region_must_be_a_subnational_level_2_code(region):
 def test_api_key_and_region_are_required_without_their_environment_variables(argv):
     with pytest.raises(SystemExit):
         parse(*argv)
+
+
+def test_region_from_the_environment_must_be_a_subnational_level_2_code(monkeypatch):
+    monkeypatch.setenv("EBIRDDEFAULTREGION", "CA-QC")
+
+    with pytest.raises(SystemExit):
+        parse("--api-key", "flag-key")
 
 
 def test_api_key_and_region_are_optional_with_their_environment_variables(monkeypatch):
