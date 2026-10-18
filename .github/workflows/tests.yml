@@ -1,0 +1,28 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # 3.11 is the floor in requires-python. Newer versions wait on the numpy and pandas
+      # pins in requirements.txt, which have no wheels past 3.13.
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      # The tests read the version from installed metadata, so install the package itself
+      - name: Install ebird-cli and the dev requirements
+        run: pip install -e . -r requirements-dev.txt
+
+      - name: Run pytest
+        run: python -m pytest
