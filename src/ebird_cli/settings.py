@@ -192,7 +192,30 @@ def first_launch_setup(settings_file: SettingsFile, prefill: Mapping[str, str], 
     try:
         answers = run_setup(prefill, ask)
     except (KeyboardInterrupt, EOFError):
-        print("\nSetup interrupted: nothing was saved.")
+        print("Setup interrupted: nothing was saved.")
         return None
     settings_file.save(answers)
     return answers
+
+
+def reconfigure(settings_file: SettingsFile, ask: Ask, environ: Mapping[str, str]) -> bool:
+    """Rerun setup pre-filled with the saved settings and overwrite them; returns whether they were saved.
+
+    Unreadable saved settings pre-fill nothing. Interrupting leaves them untouched. After saving, names each saved
+    setting that an environment variable overrides.
+    """
+    try:
+        saved = settings_file.load() or {}
+    except SettingsError:
+        saved = {}
+    try:
+        answers = run_setup(saved, ask)
+    except (KeyboardInterrupt, EOFError):
+        print("Settings unchanged.")
+        return False
+    settings_file.save(answers)
+    print(f"Settings saved to {settings_file.path}.")
+    for setting in SETTINGS:
+        if setting.name in answers and environ.get(setting.env_variable):
+            print(f"{setting.env_variable} is set, so it overrides the saved {setting.label}.")
+    return True
