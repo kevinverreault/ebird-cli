@@ -18,12 +18,6 @@ ENV_VARIABLES = {
 }
 
 
-@pytest.fixture(autouse=True)
-def no_ebird_env(monkeypatch):
-    for name in ENV_VARIABLES:
-        monkeypatch.delenv(name, raising=False)
-
-
 def parse(*argv, saved=None):
     """The settings a launch with argv resolves, from the environment as the test set it and saved settings."""
     parser = argparse.ArgumentParser()

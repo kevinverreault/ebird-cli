@@ -11,7 +11,14 @@ def cli(make_cli):
 
 @pytest.mark.parametrize(
     ("text", "expected"),
-    [("", ["recent", "notable", "exit"]), ("re", ["recent"]), ("NO", ["notable"]), ("e", ["exit"]), ("x", [])],
+    [
+        ("", ["recent", "notable", "settings", "exit"]),
+        ("re", ["recent"]),
+        ("NO", ["notable"]),
+        ("se", ["settings"]),
+        ("e", ["exit"]),
+        ("x", []),
+    ],
 )
 def test_first_word_offers_command_names_and_exit(cli, text, expected):
     assert cli.completions(text) == expected

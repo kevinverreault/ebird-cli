@@ -13,7 +13,7 @@ from prompt_toolkit.keys import Keys
 from prompt_toolkit.styles import Style
 
 from .cli.autocomplete import ContextSensitiveCompleter
-from .cli.command import NotableCommand, RecentCommand
+from .cli.command import NotableCommand, RecentCommand, SettingsCommand
 from .cli.grammar import CommandLineError
 from .domain.region import Region
 from .services.cache import CacheService
@@ -149,6 +149,7 @@ def main(argv: list[str] | None = None, ask: Ask = ask_in_terminal, settings_fil
         for command in [
             RecentCommand(observation_query, location_catalogue, printing_service, taxonomy_service),
             NotableCommand(observation_query, location_catalogue, printing_service),
+            SettingsCommand(lambda: reconfigure(settings_file, ask, os.environ)),
         ]
     }
 

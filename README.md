@@ -102,6 +102,7 @@ When launched, the CLI will display a menu of available commands:
 
 - `recent <scope, -region> [-back, -species]`: Fetch recent bird observations
 - `notable <scope, -region> [-back]`: Fetch notable bird observations
+- `settings`: Change the saved settings without leaving the prompt, as [`ebird-cli settings`](#changing-settings) does. The running session keeps its settings; the changes apply on the next launch. Ctrl+C or Ctrl+D returns to the prompt with the saved settings untouched.
 
 ### Autocompletion
 

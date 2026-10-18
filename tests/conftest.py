@@ -1,10 +1,11 @@
+import os
 import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
-from fakes import FakeEbirdClient
+from fakes import FakeEbirdClient, ScriptedAsk
 from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 from rich.console import Console
@@ -12,7 +13,7 @@ from rich.console import Console
 from ebird_cli import download_lists as download_lists_module
 from ebird_cli import settings as settings_module
 from ebird_cli.cli.autocomplete import ContextSensitiveCompleter
-from ebird_cli.cli.command import NotableCommand, RecentCommand
+from ebird_cli.cli.command import NotableCommand, RecentCommand, SettingsCommand
 from ebird_cli.domain.region import Region
 from ebird_cli.services import cache as cache_module
 from ebird_cli.services.cache import CacheService
@@ -20,6 +21,7 @@ from ebird_cli.services.location_catalogue import LocationCatalogue
 from ebird_cli.services.observation_query import ObservationQuery
 from ebird_cli.services.printing import PrintingService
 from ebird_cli.services.taxonomy import TaxonomyService
+from ebird_cli.settings import SettingsFile, reconfigure
 from ebird_cli.utils import logger as logger_module
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -39,7 +41,7 @@ def copy_fixture_cache(cache_dir: Path):
 @pytest.fixture(autouse=True)
 def offline_and_isolated(monkeypatch):
     """Fail loudly if a test would reach the real eBird API or website or the real user cache, log or config
-    directory."""
+    directory, and unset the settings' environment variables of the shell running the tests."""
 
     def forbidden(*_args, **_kwargs):
         raise AssertionError(
@@ -50,6 +52,8 @@ def offline_and_isolated(monkeypatch):
     monkeypatch.setattr(cache_module, "EbirdClient", forbidden)
     monkeypatch.setattr(logger_module, "user_log_dir", forbidden)
     monkeypatch.setattr(settings_module, "user_config_dir", forbidden)
+    for setting in settings_module.SETTINGS:
+        monkeypatch.delenv(setting.env_variable, raising=False)
     monkeypatch.setattr(download_lists_module, "Session", forbidden)
 
 
@@ -85,6 +89,8 @@ class Cli:
     completer: ContextSensitiveCompleter
     location_catalogue: LocationCatalogue
     taxonomy_service: TaxonomyService
+    settings_file: SettingsFile
+    ask: ScriptedAsk
 
     def run(self, line: str):
         command_name, *command_args = line.split()
@@ -99,8 +105,10 @@ class Cli:
 def make_cli(tmp_path):
     """Wire real services and commands the way main does, over fixture caches and a fake eBird client."""
 
-    def make(client=None, aggregations=None, year_list=None, life_list=None, lat=LAT, long=LONG) -> Cli:
+    def make(client=None, aggregations=None, year_list=None, life_list=None, lat=LAT, long=LONG, ask=None) -> Cli:
         client = client or FakeEbirdClient()
+        ask = ask or ScriptedAsk()
+        settings_file = SettingsFile(tmp_path / "config" / "settings.json")
         cache_dir = tmp_path / "cache"
         copy_fixture_cache(cache_dir)
 
@@ -116,9 +124,11 @@ def make_cli(tmp_path):
             for command in [
                 RecentCommand(observation_query, location_catalogue, printing_service, taxonomy_service),
                 NotableCommand(observation_query, location_catalogue, printing_service),
+                SettingsCommand(lambda: reconfigure(settings_file, ask, os.environ)),
             ]
         }
-        return Cli(client, commands, ContextSensitiveCompleter(commands.values()), location_catalogue, taxonomy_service)
+        completer = ContextSensitiveCompleter(commands.values())
+        return Cli(client, commands, completer, location_catalogue, taxonomy_service, settings_file, ask)
 
     return make
 
