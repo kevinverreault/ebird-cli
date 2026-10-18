@@ -31,8 +31,14 @@ jobs:
           "$RUNNER_TEMP/venv/bin/pip" install dist/*.whl
 
       # Run from outside the checkout so only the installed package can be imported
-      - name: Launch ebird-cli
+      - name: Launch ebird-cli and ebird-cli-download-lists
         working-directory: ${{ runner.temp }}
         run: |
           venv/bin/ebird-cli --help
           venv/bin/ebird-cli --version
+          # Without arguments the download helper prints its usage and exits 1, before any request to eBird
+          status=0
+          usage=$(venv/bin/ebird-cli-download-lists) || status=$?
+          echo "$usage"
+          test "$status" -eq 1
+          [[ "$usage" == "Usage: ebird-cli-download-lists "* ]]

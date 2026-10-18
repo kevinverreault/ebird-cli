@@ -155,15 +155,15 @@ When using `--year-list` and `--life-list`:
 
 ### Obtaining list files
 
-The eBird API does not expose life list or year list data, so these CSV files must be downloaded manually from the eBird website. A helper script is provided to facilitate the process:
+The eBird API does not expose life list or year list data, so these CSV files must be downloaded from the eBird website. The `ebird-cli-download-lists` command, installed alongside `ebird-cli`, downloads both into `output_dir` as `life_list.csv` and `year_list.csv`:
 
 ```bash
-python src/tools/download_lists.py session_id output_dir
+ebird-cli-download-lists session_id output_dir
 ```
 
-This requires a valid eBird session cookie (`EBIRD_SESSIONID`), which can be obtained from your browser after logging in to ebird.org. The script must be re-run whenever your lists change.
+This requires a valid eBird session cookie (`EBIRD_SESSIONID`), which can be obtained from your browser after logging in to ebird.org. The command must be re-run whenever your lists change.
 
-> **Note:** The life list only changes when you see a species for the first time ever, making it infrequent and easy to manage. The year list changes with every new species seen in the current year and resets annually, requiring more frequent re-runs of the script.
+> **Note:** The life list only changes when you see a species for the first time ever, making it infrequent and easy to manage. The year list changes with every new species seen in the current year and resets annually, requiring more frequent re-runs of the command.
 
 ## Data cache
 

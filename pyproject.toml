@@ -31,13 +31,14 @@ dependencies = [
 
 [project.scripts]
 ebird-cli = "ebird_cli.main:main"
+ebird-cli-download-lists = "ebird_cli.download_lists:main"
 
 [project.urls]
 Homepage = "https://github.com/kevinverreault/ebird-cli"
 Repository = "https://github.com/kevinverreault/ebird-cli"
 Issues = "https://github.com/kevinverreault/ebird-cli/issues"
 
-# The wheel holds the ebird_cli package only, not src/tools
+# The wheel holds the ebird_cli package only
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["ebird_cli*"]
