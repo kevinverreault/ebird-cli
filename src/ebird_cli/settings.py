@@ -10,7 +10,7 @@ from pathlib import Path
 from appdirs import user_config_dir
 from prompt_toolkit import prompt
 
-REGION_PATTERN = "([A-Z]{2}-){2}[A-Z]{2}"
+REGION_PATTERN = "[A-Z]{2}-[A-Z0-9]{1,3}-[A-Z0-9]{1,3}"
 
 
 class SettingsError(Exception):
@@ -43,7 +43,7 @@ class Setting:
         return "--" + self.name.replace("_", "-")
 
     def accepts(self, value: str) -> bool:
-        return self.pattern is None or re.match(self.pattern, value) is not None
+        return self.pattern is None or re.fullmatch(self.pattern, value) is not None
 
     @property
     def question(self) -> str:

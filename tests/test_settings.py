@@ -62,13 +62,20 @@ def test_setup_re_asks_for_the_api_key_until_one_is_given(capsys):
     assert capsys.readouterr().out.count("eBird API key is required.") == 2
 
 
-@pytest.mark.parametrize("region", ["", "CA-QC", "ca-qc-mr", "QC-MR"])
+@pytest.mark.parametrize("region", ["", "CA-QC", "ca-qc-mr", "QC-MR", "CA-QC-MONT", "CA-QC-MR-X"])
 def test_setup_re_asks_for_the_home_region_until_it_is_a_subnational_level_2_code(capsys, region):
     ask = ScriptedAsk("typed-key", region, "CA-QC-MR", *[ENTER] * 6)
 
     assert run_setup({}, ask)["region"] == "CA-QC-MR"
     assert asked_labels(ask)[1:3] == ["Home Region", "Home Region"]
     assert "Home Region" in capsys.readouterr().out
+
+
+def test_setup_accepts_a_home_region_whose_last_part_is_a_number():
+    ask = ScriptedAsk("typed-key", "US-NY-061", *[ENTER] * 6)
+
+    assert run_setup({}, ask)["region"] == "US-NY-061"
+    assert asked_labels(ask).count("Home Region") == 1
 
 
 @pytest.mark.parametrize("interrupt", [KeyboardInterrupt, EOFError])

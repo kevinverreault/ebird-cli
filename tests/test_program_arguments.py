@@ -89,10 +89,15 @@ def test_optional_options_default_to_none_and_locale_to_fr():
     assert [args.lat, args.long, args.year_list, args.life_list, args.aggregations] == [None] * 5
 
 
-@pytest.mark.parametrize("region", ["CA-QC", "ca-qc-mr", "QC-MR", "CA-Q1-MR"])
+@pytest.mark.parametrize("region", ["CA-QC", "ca-qc-mr", "QC-MR", "CA-QC-MONT", "CA-QC-MR-X", "CA-QUEB-MR"])
 def test_region_must_be_a_subnational_level_2_code(region):
     with pytest.raises(SystemExit):
         parse("--api-key", "flag-key", "--region", region)
+
+
+@pytest.mark.parametrize("region", ["CA-QC-MR", "US-NY-061", "JP-01-177", "GB-ENG-LND", "CA-Q1-MR"])
+def test_region_accepts_letter_and_number_subnational_level_2_codes(region):
+    assert parse("--api-key", "flag-key", "--region", region).region == region
 
 
 @pytest.mark.parametrize(
