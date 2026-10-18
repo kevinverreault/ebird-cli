@@ -9,6 +9,7 @@ from prompt_toolkit.completion import CompleteEvent
 from prompt_toolkit.document import Document
 from rich.console import Console
 
+from ebird_cli import download_lists as download_lists_module
 from ebird_cli.cli.autocomplete import ContextSensitiveCompleter
 from ebird_cli.cli.command import NotableCommand, RecentCommand
 from ebird_cli.domain.region import Region
@@ -36,14 +37,17 @@ def copy_fixture_cache(cache_dir: Path):
 
 @pytest.fixture(autouse=True)
 def offline_and_isolated(monkeypatch):
-    """Fail loudly if a test would reach the real eBird API or the real user cache or log directory."""
+    """Fail loudly if a test would reach the real eBird API or website or the real user cache or log directory."""
 
     def forbidden(*_args, **_kwargs):
-        raise AssertionError("tests must inject a fake eBird client and temporary cache and log directories")
+        raise AssertionError(
+            "tests must inject a fake eBird client, a fake HTTP session and temporary cache and log directories"
+        )
 
     monkeypatch.setattr(cache_module, "user_cache_dir", forbidden)
     monkeypatch.setattr(cache_module, "EbirdClient", forbidden)
     monkeypatch.setattr(logger_module, "user_log_dir", forbidden)
+    monkeypatch.setattr(download_lists_module.requests, "Session", forbidden)
 
 
 def strip_ansi(text: str) -> str:

@@ -6,10 +6,8 @@ from pathlib import Path
 import requests
 
 
-def download_csv(session_id, download_url, output_file):
+def download_csv(session, session_id, download_url, output_file):
     headers = {"User-Agent": "Mozilla/5.0"}
-
-    session = requests.Session()
 
     response = session.get(download_url, cookies={"EBIRD_SESSIONID": session_id}, headers=headers)
 
@@ -25,19 +23,25 @@ def download_csv(session_id, download_url, output_file):
         print("Response:", response.text)
 
 
-def main():
-    if len(sys.argv) != 3:
-        print("Usage: python download_lists.py <session_id> <output_dir>")
+def main(argv=None, session=None):
+    argv = sys.argv[1:] if argv is None else argv
+
+    if len(argv) != 2:
+        print("Usage: ebird-cli-download-lists <session_id> <output_dir>")
         sys.exit(1)
 
-    session_id = sys.argv[1]
-    output_dir = sys.argv[2]
+    session_id, output_dir = argv
+    session = requests.Session() if session is None else session
 
     download_csv(
-        session_id, "https://ebird.org/lifelist?r=world&time=life&fmt=csv", os.path.join(output_dir, "life_list.csv")
+        session,
+        session_id,
+        "https://ebird.org/lifelist?r=world&time=life&fmt=csv",
+        os.path.join(output_dir, "life_list.csv"),
     )
     current_year = datetime.now().year
     download_csv(
+        session,
         session_id,
         f"https://ebird.org/lifelist?r=world&time=year&year={current_year}&fmt=csv",
         os.path.join(output_dir, "year_list.csv"),
