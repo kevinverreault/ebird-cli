@@ -61,6 +61,12 @@ When launched, the CLI will display a menu of available commands:
 - `recent <scope, -region> [-back, -species]`: Fetch recent bird observations
 - `notable <scope, -region> [-back]`: Fetch notable bird observations
 
+### Autocompletion
+
+Suggestions appear as you type: command names, scopes, flags, region names for the chosen scope, species names and `-back` values. Press Tab to accept the first suggestion, or press it again to cycle through them.
+
+![Building a full command from autocompletion suggestions](docs/demo/autocomplete.gif)
+
 ### Search Scopes
 
 Bird observations can be searched in multiple scopes.
