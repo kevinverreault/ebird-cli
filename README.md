@@ -236,6 +236,18 @@ vhs docs/demo/overview.tape
 
 VHS also needs `ffmpeg` on the `PATH`.
 
+### Cutting a release
+
+Releases are published to [PyPI](https://pypi.org/project/ebird-cli/) by the `Release` workflow (`.github/workflows/release.yml`) through trusted publishing; no API token is involved.
+
+1. Bump `version` in `pyproject.toml` and merge it to `main`.
+2. Optionally, do a dry run: run the `Release` workflow manually from the Actions tab. It uploads that version to [TestPyPI](https://test.pypi.org/project/ebird-cli/), which accepts each version only once. Check the upload installs:
+   ```bash
+   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ ebird-cli
+   ```
+3. Tag the release commit `vX.Y.Z`, matching the version, and push the tag.
+4. Publish a GitHub release from that tag. The workflow uploads it to PyPI, and fails without uploading if the tag doesn't match the version in `pyproject.toml`.
+
 ## Credits
 
 Bird observation data and the eBird platform are provided by the [Cornell Lab of Ornithology](https://www.birds.cornell.edu/). This project would not be possible without their freely available [eBird API](https://documenter.getpostman.com/view/664302/S1ENwy59).

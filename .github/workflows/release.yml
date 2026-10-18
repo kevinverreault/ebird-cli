@@ -1,0 +1,87 @@
+# Trusted publishers on PyPI and TestPyPI are registered against this file name and the
+# pypi and testpypi environments, so renaming either breaks publishing.
+name: Release
+
+on:
+  release:
+    types: [published]
+  # A manual run uploads to TestPyPI as a dry run
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      # Fail before anything is built or uploaded when a vX.Y.Z tag doesn't match pyproject.toml
+      - name: Check the release tag matches the package version
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Release tag $TAG does not match the package version $version (expected v$version)"
+            exit 1
+          fi
+
+      # Install the build and twine versions pinned in requirements-dev.txt so CI matches local runs
+      - name: Install build and twine
+        run: pip install "$(grep '^build~=' requirements-dev.txt)" "$(grep '^twine~=' requirements-dev.txt)"
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      # PyPI rejects a long description it can't render, so check the README before uploading
+      - name: Check distribution metadata
+        run: twine check --strict dist/*
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-pypi:
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/ebird-cli/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-testpypi:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/ebird-cli/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/

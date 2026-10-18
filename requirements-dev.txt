@@ -3,3 +3,5 @@ ruff==0.17.1
 pre-commit==4.7.0
 pytest~=9.1.1
 build~=1.6.1
+# twine 7 needs rich>=14.3.3, which conflicts with the rich~=13.9.4 pin in requirements.txt
+twine~=6.2.0
