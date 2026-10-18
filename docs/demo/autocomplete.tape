@@ -2,7 +2,7 @@ Output docs/demo/autocomplete.gif
 Source docs/demo/config.tape
 
 Sleep 500ms
-Type "no"
+Type "re"
 Sleep 1s
 Tab
 Sleep 700ms
@@ -12,27 +12,23 @@ Type "reg"
 Sleep 1s
 Tab
 Sleep 700ms
-Type " -"
+Type " "
 Sleep 1.5s
-Type "re"
-Sleep 1s
 Tab
 Sleep 700ms
 Type " "
 Sleep 1.5s
-Type "Lav"
+Type "Montr"
 Sleep 1s
 Tab
 Sleep 700ms
-Type " -"
-Sleep 1.5s
-Type "b"
+Type " -sp"
 Sleep 1s
 Tab
 Sleep 700ms
-Type " "
+Type " bal"
 Sleep 1.5s
-Type "7"
+Tab
 Sleep 1s
 Enter
 Sleep 1s
