@@ -18,6 +18,7 @@ from ebird_cli.services.location_catalogue import LocationCatalogue
 from ebird_cli.services.observation_query import ObservationQuery
 from ebird_cli.services.printing import PrintingService
 from ebird_cli.services.taxonomy import TaxonomyService
+from ebird_cli.utils import logger as logger_module
 
 FIXTURES = Path(__file__).parent / "fixtures"
 REGION = "CA-QC-MR"
@@ -35,13 +36,14 @@ def copy_fixture_cache(cache_dir: Path):
 
 @pytest.fixture(autouse=True)
 def offline_and_isolated(monkeypatch):
-    """Fail loudly if a test would reach the real eBird API or the real user cache directory."""
+    """Fail loudly if a test would reach the real eBird API or the real user cache or log directory."""
 
     def forbidden(*_args, **_kwargs):
-        raise AssertionError("tests must inject a fake eBird client and a temporary cache directory")
+        raise AssertionError("tests must inject a fake eBird client and temporary cache and log directories")
 
     monkeypatch.setattr(cache_module, "user_cache_dir", forbidden)
     monkeypatch.setattr(cache_module, "EbirdClient", forbidden)
+    monkeypatch.setattr(logger_module, "user_log_dir", forbidden)
 
 
 def strip_ansi(text: str) -> str:

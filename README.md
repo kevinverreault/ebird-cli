@@ -159,6 +159,16 @@ The following data is cached:
 
 Hotspots are fetched again on launch once their cached file is more than 30 days old, so new hotspots appear; if eBird can't be reached, the older file is used. All other cached data is written once and reused on every subsequent launch. To force a refresh (e.g. after a new eBird taxonomy release or a region change), delete the relevant files or the entire cache directory.
 
+## Log file
+
+Each launch appends debug messages to `app.log` in the platform-appropriate user log directory, created on first launch:
+
+- Windows: `%LOCALAPPDATA%\ebird_cli\ebird_cli\Logs\app.log`
+- Linux: `~/.cache/ebird_cli/log/app.log` (under `$XDG_CACHE_HOME` instead of `~/.cache` when it is set)
+- macOS: `~/Library/Logs/ebird_cli/app.log`
+
+The file is never rotated or trimmed; delete it at any time.
+
 ## Development setup
 
 ### Virtual environment
@@ -174,7 +184,7 @@ Hotspots are fetched again on launch once their cached file is more than 30 days
 
 ### Tests
 
-The test suite runs offline: it never calls the eBird API, needs no API key and never touches your user cache directory.
+The test suite runs offline: it never calls the eBird API, needs no API key and never touches your user cache or log directory.
 
 ```bash
 python -m pytest
@@ -184,6 +194,7 @@ Tests live in `tests/`, mirroring the source layout:
 
 - `tests/cli/`: the `recent` and `notable` commands and autocompletion, driven through their public entry points
 - `tests/services/`, `tests/domain/`: cache, location and taxonomy services and domain value parsing
+- `tests/utils/`: where the app log is written
 - `tests/test_prompt_dispatch.py`, `tests/test_program_arguments.py`: prompt input handling and program arguments
 - `tests/conftest.py`: shared fixtures, including `make_cli`, which wires real services and commands the way `main` does
 - `tests/fakes.py`: the in-memory fake eBird client, the only test double

@@ -22,6 +22,7 @@ from .services.location_catalogue import LocationCatalogue
 from .services.observation_query import ObservationQuery
 from .services.printing import PrintingService
 from .services.taxonomy import TaxonomyService
+from .utils.logger import configure_logging
 
 api_key_env_variable = "EBIRDAPIKEY"
 locale_env_variable = "EBIRDLOCALE"
@@ -154,6 +155,8 @@ def setup_parser(parser: argparse.ArgumentParser):
 
 
 def main():
+    configure_logging()
+
     parser = argparse.ArgumentParser(description="eBird CLI")
     setup_parser(parser)
 
