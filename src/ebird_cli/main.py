@@ -3,6 +3,7 @@ import os
 import re
 import ssl
 import urllib.request
+from importlib.metadata import version
 
 import certifi
 from appdirs import user_cache_dir
@@ -93,6 +94,8 @@ def use_certifi_ca_bundle():
 
 
 def setup_parser(parser: argparse.ArgumentParser):
+    parser.add_argument("--version", action="version", version=f"ebird-cli {version('ebird-cli')}")
+
     parser.add_argument(
         "--api-key",
         default=os.getenv(api_key_env_variable),

@@ -1,6 +1,50 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ebird-cli"
+version = "0.1.0"
+description = "A command-line interface for exploring eBird bird observation data."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Kevin Verreault", email = "dev@kevinverreault.com" }]
+requires-python = ">=3.11"
+classifiers = [
+    "Environment :: Console",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+]
+# Only the packages the code imports; the lower bounds are the versions requirements.txt pins
+dependencies = [
+    "appdirs>=1.4.4",
+    "certifi>=2024.8.30",
+    "colorama>=0.4.6",
+    "ebird-api>=3.0.6,<4",  # 4.0 moved the modules ebird_client imports
+    "pandas>=2.2.3",
+    "prompt_toolkit>=3.0.48",
+    "requests>=2.32.3",
+    "rich>=13.9.4",
+]
+
+[project.scripts]
+ebird-cli = "ebird_cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/kevinverreault/ebird-cli"
+Repository = "https://github.com/kevinverreault/ebird-cli"
+Issues = "https://github.com/kevinverreault/ebird-cli/issues"
+
+# The wheel holds the ebird_cli package only, not src/tools
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["ebird_cli*"]
+
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 src = ["src"]
 
 [tool.ruff.lint]

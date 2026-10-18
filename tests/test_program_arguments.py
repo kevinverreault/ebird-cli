@@ -1,4 +1,6 @@
 import argparse
+import tomllib
+from pathlib import Path
 
 import pytest
 
@@ -116,3 +118,15 @@ def test_api_key_and_region_are_optional_with_their_environment_variables(monkey
     args = parse()
 
     assert (args.api_key, args.region) == ("env-key", "CA-QC-MR")
+
+
+def test_version_prints_the_version_declared_in_pyproject(capsys):
+    # Needs the package installed (pip install -e .): the version is read from its metadata
+    with (Path(__file__).parent.parent / "pyproject.toml").open("rb") as pyproject:
+        declared_version = tomllib.load(pyproject)["project"]["version"]
+
+    with pytest.raises(SystemExit) as exit_info:
+        parse("--version")
+
+    assert exit_info.value.code == 0
+    assert capsys.readouterr().out == f"ebird-cli {declared_version}\n"
