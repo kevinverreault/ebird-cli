@@ -94,7 +94,7 @@ class ObservationQuery:
     def coordinates(self) -> tuple[str, str]:
         """The user's coordinates, which every nearby query needs."""
         if self.lat is None or self.long is None:
-            raise ValueError("nearby needs coordinates: set --lat and --long, or EBIRDLAT and EBIRDLONG")
+            raise ValueError("nearby needs coordinates: set --lat and --long, or save them with settings")
         return self.lat, self.long
 
     def location_ids(self, scope: RegionalScopes, region: str | None) -> list[str]:

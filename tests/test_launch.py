@@ -45,13 +45,11 @@ def test_first_launch_runs_setup_and_saves_the_answers_before_contacting_ebird(e
     assert ebird == [("typed-key", "en")]
 
 
-def test_first_launch_setup_is_pre_filled_from_flags_and_environment_variables(ebird, settings_file, monkeypatch):
-    monkeypatch.setenv("EBIRDDEFAULTREGION", "CA-QC-MO")
-    monkeypatch.setenv("EBIRDLAT", "45.50")
+def test_first_launch_setup_is_pre_filled_from_flags(ebird, settings_file):
     ask = ScriptedAsk(*[ENTER] * len(SETTINGS))
 
     with pytest.raises(ContactedEbird):
-        main(["--api-key", "flag-key", "--lat", "46.35"], ask=ask, settings_file=settings_file)
+        main(["--api-key", "flag-key", "--region", "CA-QC-MO", "--lat", "46.35"], ask=ask, settings_file=settings_file)
 
     assert [default for _label, default in ask.questions] == ["flag-key", "CA-QC-MO", "", "46.35", "", "", "", ""]
     assert settings_file.load() == {"api_key": "flag-key", "region": "CA-QC-MO", "lat": "46.35"}
@@ -96,11 +94,8 @@ def test_settings_reruns_setup_pre_filled_with_the_saved_settings_and_overwrites
     assert settings_file.load() == {"api_key": "new-key", "region": "CA-QC-CN"}
 
 
-def test_settings_is_pre_filled_from_saved_settings_not_flags_or_environment_variables(
-    ebird, settings_file, monkeypatch
-):
+def test_settings_is_pre_filled_from_saved_settings_not_flags(ebird, settings_file):
     settings_file.save(SAVED)
-    monkeypatch.setenv("EBIRDLAT", "45.50")
     ask = ScriptedAsk(*[ENTER] * len(SETTINGS))
 
     main(["--locale", "en", "settings"], ask=ask, settings_file=settings_file)
@@ -143,19 +138,39 @@ def test_interrupting_settings_leaves_the_saved_settings_untouched(ebird, settin
     assert "Settings unchanged." in capsys.readouterr().out
 
 
-def test_settings_names_each_saved_setting_an_environment_variable_overrides(ebird, settings_file, capsys, monkeypatch):
-    monkeypatch.setenv("EBIRDAPIKEY", "env-key")
-    monkeypatch.setenv("EBIRDLOCALE", "en")
-    monkeypatch.setenv("EBIRDLONG", "-73.57")
+FORMER_ENVIRONMENT_VARIABLES = {
+    "EBIRDAPIKEY": "env-key",
+    "EBIRDDEFAULTREGION": "CA-QC-MO",
+    "EBIRDLOCALE": "en",
+    "EBIRDLAT": "45.50",
+    "EBIRDLONG": "-73.57",
+    "EBIRDYEARLIST": "env/year_list.csv",
+    "EBIRDLIFELIST": "env/life_list.csv",
+    "EBIRDAGGREGATIONS": "env/aggregations.json",
+}
 
-    main(["settings"], ask=ScriptedAsk("new-key", "CA-QC-CN", "es", *[ENTER] * 5), settings_file=settings_file)
 
-    lines = capsys.readouterr().out.splitlines()
-    assert lines[-3:] == [
-        f"Settings saved to {settings_file.path}.",
-        "EBIRDAPIKEY is set, so it overrides the saved eBird API key.",
-        "EBIRDLOCALE is set, so it overrides the saved Locale.",
-    ]
+def test_former_environment_variables_are_ignored_by_setup_settings_and_launches(
+    ebird, settings_file, capsys, monkeypatch
+):
+    for name, value in FORMER_ENVIRONMENT_VARIABLES.items():
+        monkeypatch.setenv(name, value)
+
+    first_launch = ScriptedAsk(*[ENTER] * len(SETTINGS))
+    with pytest.raises(ContactedEbird):
+        main(["--api-key", "flag-key", "--region", "CA-QC-MR"], ask=first_launch, settings_file=settings_file)
+    assert [default for _label, default in first_launch.questions] == ["flag-key", "CA-QC-MR", "", "", "", "", "", ""]
+    assert settings_file.load() == {"api_key": "flag-key", "region": "CA-QC-MR"}
+
+    capsys.readouterr()
+    settings = ScriptedAsk(ENTER, ENTER, "es", *[ENTER] * 5)
+    main(["settings"], ask=settings, settings_file=settings_file)
+    assert [default for _label, default in settings.questions] == ["flag-key", "CA-QC-MR", "", "", "", "", "", ""]
+    assert capsys.readouterr().out.splitlines()[-1] == f"Settings saved to {settings_file.path}."
+
+    with pytest.raises(ContactedEbird):
+        main([], ask=ScriptedAsk(), settings_file=settings_file)
+    assert ebird == [("flag-key", "fr"), ("flag-key", "es")]
 
 
 def test_the_next_launch_after_settings_uses_the_new_values(ebird, settings_file):
@@ -175,3 +190,11 @@ def test_help_lists_the_settings_subcommand(ebird, settings_file, capsys):
     help_text = capsys.readouterr().out
     assert "{settings}" in help_text
     assert any(line.split()[:1] == ["settings"] for line in help_text.splitlines())
+
+
+def test_help_mentions_no_environment_variable(ebird, settings_file, capsys):
+    with pytest.raises(SystemExit):
+        main(["--help"], ask=ScriptedAsk(), settings_file=settings_file)
+
+    help_text = capsys.readouterr().out
+    assert "EBIRD" not in help_text

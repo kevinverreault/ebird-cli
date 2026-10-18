@@ -1,4 +1,3 @@
-import os
 import re
 import shutil
 from dataclasses import dataclass
@@ -41,7 +40,7 @@ def copy_fixture_cache(cache_dir: Path):
 @pytest.fixture(autouse=True)
 def offline_and_isolated(monkeypatch):
     """Fail loudly if a test would reach the real eBird API or website or the real user cache, log or config
-    directory, and unset the settings' environment variables of the shell running the tests."""
+    directory."""
 
     def forbidden(*_args, **_kwargs):
         raise AssertionError(
@@ -52,8 +51,6 @@ def offline_and_isolated(monkeypatch):
     monkeypatch.setattr(cache_module, "EbirdClient", forbidden)
     monkeypatch.setattr(logger_module, "user_log_dir", forbidden)
     monkeypatch.setattr(settings_module, "user_config_dir", forbidden)
-    for setting in settings_module.SETTINGS:
-        monkeypatch.delenv(setting.env_variable, raising=False)
     monkeypatch.setattr(download_lists_module, "Session", forbidden)
 
 
@@ -124,7 +121,7 @@ def make_cli(tmp_path):
             for command in [
                 RecentCommand(observation_query, location_catalogue, printing_service, taxonomy_service),
                 NotableCommand(observation_query, location_catalogue, printing_service),
-                SettingsCommand(lambda: reconfigure(settings_file, ask, os.environ)),
+                SettingsCommand(lambda: reconfigure(settings_file, ask)),
             ]
         }
         completer = ContextSensitiveCompleter(commands.values())
