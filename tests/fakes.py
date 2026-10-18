@@ -57,6 +57,25 @@ class FakeEbirdClient:
         return self._respond("get_nearby_species", species, lat, lng, dist, back=back, hotspot=hotspot)
 
 
+@dataclass
+class FakeResponse:
+    status_code: int
+    content: bytes = b""
+    text: str = ""
+
+
+class FakeHttpSession:
+    """Stand-in for a requests session: answers each URL with its response and records every request."""
+
+    def __init__(self, responses):
+        self.responses = responses
+        self.requests = []
+
+    def get(self, url, cookies=None, headers=None):
+        self.requests.append((url, cookies))
+        return self.responses[url]
+
+
 def observation(com_name, obs_dt, loc_name="Parc de l'Île-Saint-Quentin", subnational2_name=None):
     """An eBird observation payload with the fields the CLI reads."""
     payload = {"comName": com_name, "obsDt": obs_dt, "locName": loc_name}

@@ -47,7 +47,7 @@ def offline_and_isolated(monkeypatch):
     monkeypatch.setattr(cache_module, "user_cache_dir", forbidden)
     monkeypatch.setattr(cache_module, "EbirdClient", forbidden)
     monkeypatch.setattr(logger_module, "user_log_dir", forbidden)
-    monkeypatch.setattr(download_lists_module.requests, "Session", forbidden)
+    monkeypatch.setattr(download_lists_module, "Session", forbidden)
 
 
 def strip_ansi(text: str) -> str:
