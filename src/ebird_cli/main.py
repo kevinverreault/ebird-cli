@@ -30,6 +30,7 @@ from .settings import (
     add_arguments,
     ask_in_terminal,
     first_launch_setup,
+    reconfigure,
     resolve,
     supplied,
 )
@@ -87,6 +88,9 @@ def setup_parser(parser: argparse.ArgumentParser):
     parser.add_argument("--version", action="version", version=f"ebird-cli {version('ebird-cli')}")
     add_arguments(parser)
 
+    commands = parser.add_subparsers(dest="command", title="commands")
+    commands.add_parser("settings", help="change the saved settings, then exit")
+
 
 def read_settings(parser: argparse.ArgumentParser, args: argparse.Namespace, saved) -> Settings:
     """The settings of this launch, exiting with a usage error when they cannot start it."""
@@ -104,6 +108,10 @@ def main(argv: list[str] | None = None, ask: Ask = ask_in_terminal, settings_fil
     args = parser.parse_args(argv)
 
     settings_file = settings_file or SettingsFile()
+    if args.command == "settings":
+        reconfigure(settings_file, ask, os.environ)
+        return
+
     try:
         saved = settings_file.load()
     except SettingsError as e:

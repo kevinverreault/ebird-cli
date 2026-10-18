@@ -46,6 +46,16 @@ The answers are saved to `settings.json` in the platform-appropriate user config
 
 This directory is apart from the [data cache](#data-cache), so deleting the cache keeps your settings. Setup never writes environment variables.
 
+### Changing settings
+
+Run `ebird-cli settings` to change the saved settings at any time:
+
+```bash
+ebird-cli settings
+```
+
+It asks the same questions as first-launch setup, pre-filled with the saved settings, then overwrites them and exits; the next `ebird-cli` launch uses the new values. It never contacts eBird, so it also fixes a wrong saved API key or Home Region. Ctrl+C or Ctrl+D leaves the saved settings untouched. Because environment variables outrank saved settings, it names each saved setting that an environment variable you have set overrides.
+
 ### Command-Line Arguments
 
 The CLI supports the following arguments:
