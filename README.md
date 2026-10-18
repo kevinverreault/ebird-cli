@@ -36,7 +36,7 @@ The eBird API key and the Home Region are required, but the saved settings alway
 
 ### First-launch setup
 
-The first time `ebird-cli` starts without saved settings, it asks for each setting before it contacts eBird: eBird API key, Home Region, locale, latitude, longitude, year list path, life list path and aggregations path. Each answer is pre-filled with the value a command-line argument or environment variable already gives it, so press Enter to keep it. The API key and the Home Region (a subnational level 2 code like `CA-QC-MR`) are required; leave any other setting empty with Enter. Interrupting setup with Ctrl+C (or Ctrl+D on an empty answer) saves nothing, and setup starts again on the next launch.
+The first time `ebird-cli` starts without saved settings, it asks for each setting before it contacts eBird: eBird API key, Home Region, locale, latitude, longitude, year list path, life list path and aggregations path. Each answer is pre-filled with the value a command-line argument or environment variable already gives it, so press Enter to keep it. The API key and the Home Region (a subnational level 2 code like `CA-QC-MR` or `US-NY-061`) are required; leave any other setting empty with Enter. Interrupting setup with Ctrl+C (or Ctrl+D on an empty answer) saves nothing, and setup starts again on the next launch.
 
 The answers are saved to `settings.json` in the platform-appropriate user config directory, and every later launch reads them without asking again:
 
