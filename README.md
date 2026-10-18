@@ -11,13 +11,17 @@ A command-line interface for exploring eBird bird observation data.
 
 ## Installation
 
-1. Clone the repository
-2. Set up a virtual environment
-3. Install the `ebird-cli` command from the checkout:
+1. Install the [`ebird-cli` package](https://pypi.org/project/ebird-cli/) from PyPI, which provides the `ebird-cli` and `ebird-cli-download-lists` commands:
    ```bash
-   pip install .
+   pip install ebird-cli
    ```
-4. Configure your eBird API key
+   To keep the CLI in its own environment, install it with [pipx](https://pipx.pypa.io/) instead:
+   ```bash
+   pipx install ebird-cli
+   ```
+2. Configure your eBird API key (see [Configuration](#configuration))
+
+To upgrade to the latest release, run `pip install --upgrade ebird-cli` (or `pipx upgrade ebird-cli`). To work on the code instead, see [Development setup](#development-setup).
 
 ## Configuration
 
@@ -190,11 +194,18 @@ The file is never rotated or trimmed; delete it at any time.
 
 ### Virtual environment
 
-1. Activate the virtual environment:
+1. Clone the repository and create a virtual environment in it:
+   ```bash
+   git clone https://github.com/kevinverreault/ebird-cli.git
+   cd ebird-cli
+   python -m venv venv
+   ```
+
+2. Activate the virtual environment:
    - On Windows: `venv\Scripts\activate`
    - On macOS/Linux: `source venv/bin/activate`
 
-2. Install the project in editable mode with the dev tools (`requirements-dev.txt` adds the test, lint and build tools to the pinned runtime dependencies):
+3. Install the project in editable mode with the dev tools (`requirements-dev.txt` adds the test, lint and build tools to the pinned runtime dependencies):
    ```bash
    pip install -e . -r requirements-dev.txt
    ```
