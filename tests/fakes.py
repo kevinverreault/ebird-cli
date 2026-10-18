@@ -82,3 +82,28 @@ def observation(com_name, obs_dt, loc_name="Parc de l'Île-Saint-Quentin", subna
     if subnational2_name is not None:
         payload["subnational2Name"] = subnational2_name
     return payload
+
+
+ENTER = object()
+"""A scripted answer that accepts the pre-filled text, as pressing Enter does."""
+
+
+class ScriptedAsk:
+    """Stand-in for the terminal prompt: gives each scripted answer in turn and records every question.
+
+    An answer is the text typed, ENTER to accept the pre-filled text, or an exception to raise, as Ctrl+C
+    (KeyboardInterrupt) or Ctrl+D (EOFError) do.
+    """
+
+    def __init__(self, *answers):
+        self.answers = list(answers)
+        self.questions: list[tuple[str, str]] = []
+
+    def __call__(self, label: str, default: str) -> str:
+        self.questions.append((label, default))
+        answer = self.answers.pop(0)
+        if answer is ENTER:
+            return default
+        if isinstance(answer, type) and issubclass(answer, BaseException):
+            raise answer
+        return answer

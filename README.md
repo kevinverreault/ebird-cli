@@ -19,30 +19,51 @@ A command-line interface for exploring eBird bird observation data.
    ```bash
    pipx install ebird-cli
    ```
-2. Configure your eBird API key (see [Configuration](#configuration))
+2. Run `ebird-cli`. The first launch asks for your eBird API key, Home Region and the other settings, and saves them (see [First-launch setup](#first-launch-setup))
 
 To upgrade to the latest release, run `pip install --upgrade ebird-cli` (or `pipx upgrade ebird-cli`). To work on the code instead, see [Development setup](#development-setup).
 
 ## Configuration
 
+Each setting is read from the first of these sources that has it:
+
+1. its command-line argument
+2. its environment variable
+3. the saved settings
+4. its default (only the locale has one: `fr`)
+
+The eBird API key and the Home Region are required, but the saved settings always hold them once first-launch setup is done.
+
+### First-launch setup
+
+The first time `ebird-cli` starts without saved settings, it asks for each setting before it contacts eBird: eBird API key, Home Region, locale, latitude, longitude, year list path, life list path and aggregations path. Each answer is pre-filled with the value a command-line argument or environment variable already gives it, so press Enter to keep it. The API key and the Home Region (a subnational level 2 code like `CA-QC-MR`) are required; leave any other setting empty with Enter. Interrupting setup with Ctrl+C or Ctrl+D saves nothing, and setup starts again on the next launch.
+
+The answers are saved to `settings.json` in the platform-appropriate user config directory, and every later launch reads them without asking again:
+
+- Windows: `%LOCALAPPDATA%\ebird_cli\ebird_cli\settings.json`
+- Linux: `~/.config/ebird_cli/settings.json` (under `$XDG_CONFIG_HOME` instead of `~/.config` when it is set)
+- macOS: `~/Library/Application Support/ebird_cli/settings.json`
+
+This directory is apart from the [data cache](#data-cache), so deleting the cache keeps your settings. Setup never writes environment variables.
+
 ### Command-Line Arguments
 
 The CLI supports the following arguments:
 
-| Argument         | Description                           | Default                           | Required |
-| ---------------- | ------------------------------------- | --------------------------------- | -------- |
-| `--api-key`      | eBird API key                         | From `EBIRDAPIKEY` env var        | **Yes**  |
-| `--region`       | eBird subnational level 2 region code | From `EBIRDDEFAULTREGION` env var | **Yes**  |
-| `--locale`       | Language locale                       | From `EBIRDLOCALE` (or `fr`)      | No       |
-| `--lat`          | Latitude                              | From `EBIRDLAT` env var           | No       |
-| `--long`         | Longitude                             | From `EBIRDLONG` env var          | No       |
-| `--year-list`    | Path to year observations list        | From `EBIRDYEARLIST` env var      | No       |
-| `--life-list`    | Path to lifetime observations list    | From `EBIRDLIFELIST` env var      | No       |
-| `--aggregations` | Path to aggregations JSON file        | From `EBIRDAGGREGATIONS` env var  | No       |
+| Argument         | Description                           | Otherwise from                               | Required |
+| ---------------- | ------------------------------------- | -------------------------------------------- | -------- |
+| `--api-key`      | eBird API key                         | `EBIRDAPIKEY` env var, saved settings        | **Yes**  |
+| `--region`       | eBird subnational level 2 region code | `EBIRDDEFAULTREGION` env var, saved settings | **Yes**  |
+| `--locale`       | Language locale                       | `EBIRDLOCALE` env var, saved settings, `fr`  | No       |
+| `--lat`          | Latitude                              | `EBIRDLAT` env var, saved settings           | No       |
+| `--long`         | Longitude                             | `EBIRDLONG` env var, saved settings          | No       |
+| `--year-list`    | Path to year observations list        | `EBIRDYEARLIST` env var, saved settings      | No       |
+| `--life-list`    | Path to lifetime observations list    | `EBIRDLIFELIST` env var, saved settings      | No       |
+| `--aggregations` | Path to aggregations JSON file        | `EBIRDAGGREGATIONS` env var, saved settings  | No       |
 
 ### Environment Variables
 
-You can configure the CLI using the following environment variables to avoid manual parameter entry:
+The following environment variables override the saved settings and are overridden by the command-line arguments:
 
 - `EBIRDAPIKEY`: Your eBird API key
 - `EBIRDDEFAULTREGION`: Default region for default search and hotspots filtering (`CA-QC-MR`)
@@ -58,8 +79,10 @@ You can configure the CLI using the following environment variables to avoid man
 ### Launching the CLI
 
 ```bash
-ebird-cli --api-key <ebird-api-key> --region <region-code> [optional arguments]
+ebird-cli [optional arguments]
 ```
+
+Any argument overrides the saved setting for that launch only.
 
 `ebird-cli --version` prints the installed version.
 
@@ -113,10 +136,10 @@ Use the optional `-back` parameter to change the number of days back to fetch ob
 
 Aggregations allow you to define custom named groups of hotspots that appear alongside eBird hotspots when using the `hotspot` scope. This is useful for combining multiple nearby locations under a single name.
 
-Provide the path to your aggregations file via `--aggregations` or the `EBIRDAGGREGATIONS` environment variable:
+Provide the path to your aggregations file at setup, or via `--aggregations` or the `EBIRDAGGREGATIONS` environment variable:
 
 ```bash
-ebird-cli --api-key <key> --region <region> --aggregations ~/ebird_data/aggregations.json
+ebird-cli --aggregations ~/ebird_data/aggregations.json
 ```
 
 The aggregations file is a JSON array where each element maps a custom name to a list of eBird location IDs:
@@ -178,7 +201,7 @@ The following data is cached:
 - **Location data** (per region): subnational level 1 regions, subnational level 2 regions, and every hotspot in the subnational region — stored as JSON files under `location/<national>/` and `location/<national>/<subnational>/`
 - **Taxonomy** (per locale and national region): the full eBird taxonomy filtered to species observed in the configured country — stored as CSV files under `taxonomy/<national>/`
 
-Hotspots are fetched again on launch once their cached file is more than 30 days old, so new hotspots appear; if eBird can't be reached, the older file is used. All other cached data is written once and reused on every subsequent launch. To force a refresh (e.g. after a new eBird taxonomy release or a region change), delete the relevant files or the entire cache directory.
+Hotspots are fetched again on launch once their cached file is more than 30 days old, so new hotspots appear; if eBird can't be reached, the older file is used. All other cached data is written once and reused on every subsequent launch. To force a refresh (e.g. after a new eBird taxonomy release or a region change), delete the relevant files or the entire cache directory; your saved settings live elsewhere and are kept.
 
 ## Log file
 
@@ -213,7 +236,7 @@ The file is never rotated or trimmed; delete it at any time.
 
 ### Tests
 
-The test suite runs offline: it never calls the eBird API, needs no API key and never touches your user cache or log directory.
+The test suite runs offline: it never calls the eBird API, needs no API key and never touches your user cache, log or config directory.
 
 ```bash
 python -m pytest
@@ -225,8 +248,9 @@ Tests live in `tests/`, mirroring the source layout:
 - `tests/services/`, `tests/domain/`: cache, location and taxonomy services and domain value parsing
 - `tests/utils/`: where the app log is written
 - `tests/test_prompt_dispatch.py`, `tests/test_program_arguments.py`: prompt input handling and program arguments
+- `tests/test_settings.py`, `tests/test_launch.py`: the setup questions and settings file, and launching with or without saved settings
 - `tests/conftest.py`: shared fixtures, including `make_cli`, which wires real services and commands the way `main` does
-- `tests/fakes.py`: the in-memory fake eBird client, the only test double
+- `tests/fakes.py`: the test doubles: the in-memory fake eBird client, a fake HTTP session and scripted answers to the setup questions
 - `tests/fixtures/`: small hand-written cache, list and aggregation files for the `CA-QC-MR` region
 
 Tests named `..._currently_...` pin behaviour that looks accidental, so changing it is a deliberate test change.

@@ -1,6 +1,5 @@
 import argparse
 import os
-import re
 import ssl
 import urllib.request
 from importlib.metadata import version
@@ -23,27 +22,18 @@ from .services.location_catalogue import LocationCatalogue
 from .services.observation_query import ObservationQuery
 from .services.printing import PrintingService
 from .services.taxonomy import TaxonomyService
+from .settings import (
+    Ask,
+    Settings,
+    SettingsError,
+    SettingsFile,
+    add_arguments,
+    ask_in_terminal,
+    first_launch_setup,
+    resolve,
+    supplied,
+)
 from .utils.logger import configure_logging
-
-api_key_env_variable = "EBIRDAPIKEY"
-locale_env_variable = "EBIRDLOCALE"
-default_region_env_variable = "EBIRDDEFAULTREGION"
-year_list_env_variable = "EBIRDYEARLIST"
-life_list_env_variable = "EBIRDLIFELIST"
-lat_env_variable = "EBIRDLAT"
-long_env_variable = "EBIRDLONG"
-aggregations_env_variable = "EBIRDAGGREGATIONS"
-
-region_regex = "([A-Z]{2}-){2}[A-Z]{2}"
-
-
-def regex_type(pattern: str | re.Pattern):
-    def closure_check_regex(arg_value):
-        if not re.match(pattern, arg_value):
-            raise argparse.ArgumentTypeError("invalid value")
-        return arg_value
-
-    return closure_check_regex
 
 
 def print_menu(commands, args=None):
@@ -95,85 +85,45 @@ def use_certifi_ca_bundle():
 
 def setup_parser(parser: argparse.ArgumentParser):
     parser.add_argument("--version", action="version", version=f"ebird-cli {version('ebird-cli')}")
-
-    parser.add_argument(
-        "--api-key",
-        default=os.getenv(api_key_env_variable),
-        required=os.getenv(api_key_env_variable) is None,
-        help=f"eBird API key (mandatory if {api_key_env_variable} env variable is not set)",
-    )
-
-    parser.add_argument(
-        "--region",
-        default=os.getenv(default_region_env_variable),
-        required=os.getenv(default_region_env_variable) is None,
-        help=(
-            "eBird subnational level 2 region code is mandatory if "
-            f"{default_region_env_variable} env variable is not set"
-        ),
-        type=regex_type(region_regex),
-    )
-
-    parser.add_argument(
-        "--locale",
-        type=str,
-        default=os.getenv(locale_env_variable) if os.getenv(locale_env_variable) is not None else "fr",
-        help="Locale",
-    )
-
-    parser.add_argument(
-        "--lat",
-        type=str,
-        default=os.getenv(lat_env_variable),
-        help="Latitude",
-    )
-
-    parser.add_argument(
-        "--long",
-        type=str,
-        default=os.getenv(long_env_variable),
-        help="Longitude",
-    )
-
-    parser.add_argument(
-        "--year-list",
-        type=str,
-        default=os.getenv(year_list_env_variable),
-        help="List of observations for the current year",
-    )
-
-    parser.add_argument(
-        "--life-list",
-        type=str,
-        default=os.getenv(life_list_env_variable),
-        help="List of lifetime observations",
-    )
-
-    parser.add_argument(
-        "--aggregations",
-        type=str,
-        default=os.getenv(aggregations_env_variable),
-        help=f"Path to aggregations JSON file (custom hotspot groups). From {aggregations_env_variable} env var",
-    )
+    add_arguments(parser)
 
 
-def main():
+def read_settings(parser: argparse.ArgumentParser, args: argparse.Namespace, saved) -> Settings:
+    """The settings of this launch, exiting with a usage error when they cannot start it."""
+    try:
+        return resolve(args, os.environ, saved)
+    except SettingsError as e:
+        parser.error(e.message)
+
+
+def main(argv: list[str] | None = None, ask: Ask = ask_in_terminal, settings_file: SettingsFile | None = None):
     configure_logging()
 
     parser = argparse.ArgumentParser(description="eBird CLI")
     setup_parser(parser)
+    args = parser.parse_args(argv)
 
-    args = parser.parse_args()
+    settings_file = settings_file or SettingsFile()
+    try:
+        saved = settings_file.load()
+    except SettingsError as e:
+        parser.error(e.message)
+    if saved is None:
+        saved = first_launch_setup(settings_file, supplied(args, os.environ), ask)
+        if saved is None:
+            return
 
-    api_key = args.api_key
-    region = args.region
-    locale = args.locale
-    lat = args.lat
-    long = args.long
+    settings = read_settings(parser, args, saved)
 
-    life_list = args.life_list or None
-    year_list = args.year_list or None
-    aggregations = args.aggregations or None
+    api_key = settings.api_key
+    region = settings.region
+    locale = settings.locale
+    lat = settings.lat
+    long = settings.long
+
+    life_list = settings.life_list
+    year_list = settings.year_list
+    aggregations = settings.aggregations
 
     use_certifi_ca_bundle()
 
@@ -203,14 +153,14 @@ def main():
         }
     )
 
-    print_menu(commands, args)
+    print_menu(commands, settings)
     session = PromptSession(completer=ContextSensitiveCompleter(commands.values()), key_bindings=setup_key_bindings())
 
     while True:
         try:
             print("")
             user_input = session.prompt("⋙  ", style=style)
-            if not handle_input(user_input, commands, args):
+            if not handle_input(user_input, commands, settings):
                 break
         except KeyboardInterrupt:
             continue

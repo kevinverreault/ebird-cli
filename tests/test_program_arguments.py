@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from ebird_cli.main import setup_parser
+from ebird_cli.main import read_settings, setup_parser
 
 ENV_VARIABLES = {
     "EBIRDAPIKEY": "env-key",
@@ -24,11 +24,11 @@ def no_ebird_env(monkeypatch):
         monkeypatch.delenv(name, raising=False)
 
 
-def parse(*argv):
-    """Build the parser after the environment is set: defaults and required are read at setup time."""
+def parse(*argv, saved=None):
+    """The settings a launch with argv resolves, from the environment as the test set it and saved settings."""
     parser = argparse.ArgumentParser()
     setup_parser(parser)
-    return parser.parse_args(list(argv))
+    return read_settings(parser, parser.parse_args(list(argv)), saved)
 
 
 def test_reads_every_option_from_flags():
@@ -111,6 +111,13 @@ def test_api_key_and_region_are_required_without_their_environment_variables(arg
         parse(*argv)
 
 
+def test_region_from_the_environment_must_be_a_subnational_level_2_code(monkeypatch):
+    monkeypatch.setenv("EBIRDDEFAULTREGION", "CA-QC")
+
+    with pytest.raises(SystemExit):
+        parse("--api-key", "flag-key")
+
+
 def test_api_key_and_region_are_optional_with_their_environment_variables(monkeypatch):
     monkeypatch.setenv("EBIRDAPIKEY", "env-key")
     monkeypatch.setenv("EBIRDDEFAULTREGION", "CA-QC-MR")
@@ -118,6 +125,42 @@ def test_api_key_and_region_are_optional_with_their_environment_variables(monkey
     args = parse()
 
     assert (args.api_key, args.region) == ("env-key", "CA-QC-MR")
+
+
+SAVED = {
+    "api_key": "saved-key",
+    "region": "CA-QC-CN",
+    "locale": "es",
+    "lat": "48.13",
+    "long": "-69.72",
+    "year_list": "saved/year_list.csv",
+    "life_list": "saved/life_list.csv",
+    "aggregations": "saved/aggregations.json",
+}
+
+
+def test_saved_settings_supply_every_option_without_flags_or_environment_variables():
+    assert vars(parse(saved=SAVED)) == SAVED
+
+
+def test_environment_variables_override_saved_settings(monkeypatch):
+    for name, value in ENV_VARIABLES.items():
+        monkeypatch.setenv(name, value)
+
+    assert vars(parse(saved=SAVED)) == vars(parse())
+
+
+def test_flags_override_saved_settings():
+    args = parse("--api-key", "flag-key", "--region", "CA-QC-MR", "--locale", "en", saved=SAVED)
+
+    assert (args.api_key, args.region, args.locale, args.lat) == ("flag-key", "CA-QC-MR", "en", "48.13")
+
+
+def test_settings_missing_from_saved_settings_fall_back_to_their_default():
+    args = parse(saved={"api_key": "saved-key", "region": "CA-QC-CN"})
+
+    assert args.locale == "fr"
+    assert [args.lat, args.long, args.year_list, args.life_list, args.aggregations] == [None] * 5
 
 
 def test_version_prints_the_version_declared_in_pyproject(capsys):
