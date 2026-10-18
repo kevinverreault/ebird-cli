@@ -6,20 +6,9 @@ import pytest
 
 from ebird_cli.main import read_settings, setup_parser
 
-ENV_VARIABLES = {
-    "EBIRDAPIKEY": "env-key",
-    "EBIRDDEFAULTREGION": "CA-QC-MO",
-    "EBIRDLOCALE": "en",
-    "EBIRDLAT": "45.50",
-    "EBIRDLONG": "-73.57",
-    "EBIRDYEARLIST": "~/ebird_data/year_list.csv",
-    "EBIRDLIFELIST": "~/ebird_data/life_list.csv",
-    "EBIRDAGGREGATIONS": "~/ebird_data/aggregations.json",
-}
-
 
 def parse(*argv, saved=None):
-    """The settings a launch with argv resolves, from the environment as the test set it and saved settings."""
+    """The settings a launch with argv and saved settings resolves."""
     parser = argparse.ArgumentParser()
     setup_parser(parser)
     return read_settings(parser, parser.parse_args(list(argv)), saved)
@@ -57,31 +46,6 @@ def test_reads_every_option_from_flags():
     }
 
 
-def test_reads_every_option_from_environment_variables(monkeypatch):
-    for name, value in ENV_VARIABLES.items():
-        monkeypatch.setenv(name, value)
-
-    assert vars(parse()) == {
-        "api_key": "env-key",
-        "region": "CA-QC-MO",
-        "locale": "en",
-        "lat": "45.50",
-        "long": "-73.57",
-        "year_list": "~/ebird_data/year_list.csv",
-        "life_list": "~/ebird_data/life_list.csv",
-        "aggregations": "~/ebird_data/aggregations.json",
-    }
-
-
-def test_flags_override_environment_variables(monkeypatch):
-    monkeypatch.setenv("EBIRDAPIKEY", "env-key")
-    monkeypatch.setenv("EBIRDDEFAULTREGION", "CA-QC-MO")
-
-    args = parse("--api-key", "flag-key", "--region", "CA-QC-MR")
-
-    assert (args.api_key, args.region) == ("flag-key", "CA-QC-MR")
-
-
 def test_optional_options_default_to_none_and_locale_to_fr():
     args = parse("--api-key", "flag-key", "--region", "CA-QC-MR")
 
@@ -101,29 +65,21 @@ def test_region_accepts_letter_and_number_subnational_level_2_codes(region):
 
 
 @pytest.mark.parametrize(
-    "argv",
-    [("--region", "CA-QC-MR"), ("--api-key", "flag-key")],
+    ("argv", "flag"),
+    [(("--region", "CA-QC-MR"), "--api-key"), (("--api-key", "flag-key"), "--region")],
     ids=["api key missing", "region missing"],
 )
-def test_api_key_and_region_are_required_without_their_environment_variables(argv):
+def test_api_key_and_region_are_required_without_their_flag_or_saved_settings(argv, flag, capsys):
     with pytest.raises(SystemExit):
         parse(*argv)
 
+    error = capsys.readouterr().err.splitlines()[-1]
+    assert error.endswith(f"error: {flag} is required: set it or run ebird-cli settings")
 
-def test_region_from_the_environment_must_be_a_subnational_level_2_code(monkeypatch):
-    monkeypatch.setenv("EBIRDDEFAULTREGION", "CA-QC")
 
+def test_region_from_saved_settings_must_be_a_subnational_level_2_code():
     with pytest.raises(SystemExit):
-        parse("--api-key", "flag-key")
-
-
-def test_api_key_and_region_are_optional_with_their_environment_variables(monkeypatch):
-    monkeypatch.setenv("EBIRDAPIKEY", "env-key")
-    monkeypatch.setenv("EBIRDDEFAULTREGION", "CA-QC-MR")
-
-    args = parse()
-
-    assert (args.api_key, args.region) == ("env-key", "CA-QC-MR")
+        parse(saved={"api_key": "saved-key", "region": "CA-QC"})
 
 
 SAVED = {
@@ -138,15 +94,8 @@ SAVED = {
 }
 
 
-def test_saved_settings_supply_every_option_without_flags_or_environment_variables():
+def test_saved_settings_supply_every_option_without_flags():
     assert vars(parse(saved=SAVED)) == SAVED
-
-
-def test_environment_variables_override_saved_settings(monkeypatch):
-    for name, value in ENV_VARIABLES.items():
-        monkeypatch.setenv(name, value)
-
-    assert vars(parse(saved=SAVED)) == vars(parse())
 
 
 def test_flags_override_saved_settings():

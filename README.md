@@ -28,15 +28,14 @@ To upgrade to the latest release, run `pip install --upgrade ebird-cli` (or `pip
 Each setting is read from the first of these sources that has it:
 
 1. its command-line argument
-2. its environment variable
-3. the saved settings
-4. its default (only the locale has one: `fr`)
+2. the saved settings
+3. its default (only the locale has one: `fr`)
 
 The eBird API key and the Home Region are required, but the saved settings always hold them once first-launch setup is done.
 
 ### First-launch setup
 
-The first time `ebird-cli` starts without saved settings, it asks for each setting before it contacts eBird: eBird API key, Home Region, locale, latitude, longitude, year list path, life list path and aggregations path. Each answer is pre-filled with the value a command-line argument or environment variable already gives it, so press Enter to keep it. The API key and the Home Region (a subnational level 2 code like `CA-QC-MR` or `US-NY-061`) are required; leave any other setting empty with Enter. Interrupting setup with Ctrl+C (or Ctrl+D on an empty answer) saves nothing, and setup starts again on the next launch.
+The first time `ebird-cli` starts without saved settings, it asks for each setting before it contacts eBird: eBird API key, Home Region, locale, latitude, longitude, year list path, life list path and aggregations path. Each answer is pre-filled with the value a command-line argument already gives it, so press Enter to keep it. The API key and the Home Region (a subnational level 2 code like `CA-QC-MR` or `US-NY-061`) are required; leave any other setting empty with Enter. Interrupting setup with Ctrl+C (or Ctrl+D on an empty answer) saves nothing, and setup starts again on the next launch.
 
 The answers are saved to `settings.json` in the platform-appropriate user config directory, and every later launch reads them without asking again:
 
@@ -44,7 +43,7 @@ The answers are saved to `settings.json` in the platform-appropriate user config
 - Linux: `~/.config/ebird_cli/settings.json` (under `$XDG_CONFIG_HOME` instead of `~/.config` when it is set)
 - macOS: `~/Library/Application Support/ebird_cli/settings.json`
 
-This directory is apart from the [data cache](#data-cache), so deleting the cache keeps your settings. Setup never writes environment variables.
+This directory is apart from the [data cache](#data-cache), so deleting the cache keeps your settings.
 
 ### Changing settings
 
@@ -54,35 +53,22 @@ Run `ebird-cli settings` to change the saved settings at any time:
 ebird-cli settings
 ```
 
-It asks the same questions as first-launch setup, pre-filled with the saved settings, then overwrites them and exits; the next `ebird-cli` launch uses the new values. It never contacts eBird, so it also fixes a wrong saved API key or Home Region. Ctrl+C (or Ctrl+D on an empty answer) leaves the saved settings untouched. Because environment variables outrank saved settings, it names each saved setting that an environment variable you have set overrides.
+It asks the same questions as first-launch setup, pre-filled with the saved settings, then overwrites them and exits; the next `ebird-cli` launch uses the new values. It never contacts eBird, so it also fixes a wrong saved API key or Home Region. Ctrl+C (or Ctrl+D on an empty answer) leaves the saved settings untouched.
 
 ### Command-Line Arguments
 
 The CLI supports the following arguments:
 
-| Argument         | Description                           | Otherwise from                               | Required |
-| ---------------- | ------------------------------------- | -------------------------------------------- | -------- |
-| `--api-key`      | eBird API key                         | `EBIRDAPIKEY` env var, saved settings        | **Yes**  |
-| `--region`       | eBird subnational level 2 region code | `EBIRDDEFAULTREGION` env var, saved settings | **Yes**  |
-| `--locale`       | Language locale                       | `EBIRDLOCALE` env var, saved settings, `fr`  | No       |
-| `--lat`          | Latitude                              | `EBIRDLAT` env var, saved settings           | No       |
-| `--long`         | Longitude                             | `EBIRDLONG` env var, saved settings          | No       |
-| `--year-list`    | Path to year observations list        | `EBIRDYEARLIST` env var, saved settings      | No       |
-| `--life-list`    | Path to lifetime observations list    | `EBIRDLIFELIST` env var, saved settings      | No       |
-| `--aggregations` | Path to aggregations JSON file        | `EBIRDAGGREGATIONS` env var, saved settings  | No       |
-
-### Environment Variables
-
-The following environment variables override the saved settings and are overridden by the command-line arguments:
-
-- `EBIRDAPIKEY`: Your eBird API key
-- `EBIRDDEFAULTREGION`: Default region for default search and hotspots filtering (`CA-QC-MR`)
-- `EBIRDLOCALE`: Preferred language locale (`fr`)
-- `EBIRDLAT`: Latitude for location-based searches (`47.87`)
-- `EBIRDLONG`: Longitude for location-based searches (`-72.17`)
-- `EBIRDYEARLIST`: Path to your year observations list (`~/ebird_data/year_list.csv`)
-- `EBIRDLIFELIST`: Path to your lifetime observations list (`~/ebird_data/life_list.csv`)
-- `EBIRDAGGREGATIONS`: Path to your aggregations JSON file (`~/ebird_data/aggregations.json`)
+| Argument         | Description                           | Otherwise from       | Required |
+| ---------------- | ------------------------------------- | -------------------- | -------- |
+| `--api-key`      | eBird API key                         | saved settings       | **Yes**  |
+| `--region`       | eBird subnational level 2 region code | saved settings       | **Yes**  |
+| `--locale`       | Language locale                       | saved settings, `fr` | No       |
+| `--lat`          | Latitude                              | saved settings       | No       |
+| `--long`         | Longitude                             | saved settings       | No       |
+| `--year-list`    | Path to year observations list        | saved settings       | No       |
+| `--life-list`    | Path to lifetime observations list    | saved settings       | No       |
+| `--aggregations` | Path to aggregations JSON file        | saved settings       | No       |
 
 ## Usage
 
@@ -115,7 +101,7 @@ Suggestions appear as you type: command names, scopes, flags, region names for t
 Bird observations can be searched in multiple scopes.
 
 1. **Nearby**: Based on provided latitude and longitude
-   - Requires `--lat` and `--long` program arguments
+   - Requires a latitude and longitude, from `--lat` and `--long` or the saved settings
    - Shows observations near the specified geographic coordinates
    - `recent nearby`
 
@@ -147,7 +133,7 @@ Use the optional `-back` parameter to change the number of days back to fetch ob
 
 Aggregations allow you to define custom named groups of hotspots that appear alongside eBird hotspots when using the `hotspot` scope. This is useful for combining multiple nearby locations under a single name.
 
-Provide the path to your aggregations file at setup, or via `--aggregations` or the `EBIRDAGGREGATIONS` environment variable:
+Provide the path to your aggregations file at setup, or via `--aggregations`:
 
 ```bash
 ebird-cli --aggregations ~/ebird_data/aggregations.json
@@ -182,7 +168,7 @@ The `-species` flag supports context-sensitive autocompletion using the cached t
 
 ![Autocompleting a species name and filtering recent observations to it](https://raw.githubusercontent.com/kevinverreault/ebird-cli/main/docs/demo/species-filter.gif)
 
-> **Note:** Autocompletion and lookup use the locale specified by `--locale` / `EBIRDLOCALE`. Species names must be typed in the configured locale.
+> **Note:** Autocompletion and lookup use the locale specified by `--locale` or the saved settings. Species names must be typed in the configured locale.
 
 ### List highlighting
 
@@ -268,7 +254,7 @@ Tests named `..._currently_...` pin behaviour that looks accidental, so changing
 
 ### Demo GIFs
 
-The GIFs in this README are recorded with [VHS](https://github.com/charmbracelet/vhs) from the tapes in `docs/demo/`. They call the live eBird API, so they need your API key and environment variables set. `config.tape` holds the shared settings and launches the CLI out of frame.
+The GIFs in this README are recorded with [VHS](https://github.com/charmbracelet/vhs) from the tapes in `docs/demo/`. They call the live eBird API, so they need saved settings with your API key. `config.tape` holds the shared settings and launches the CLI out of frame.
 
 On Windows, install VHS and its terminal dependency, then re-record a GIF from the repository root:
 

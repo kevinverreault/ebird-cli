@@ -1,4 +1,4 @@
-"""The program settings: one definition per setting, and their resolution from flags, environment and saved values."""
+"""The program settings: one definition per setting, and their resolution from flags and saved values."""
 
 import argparse
 import json
@@ -23,14 +23,13 @@ class SettingsError(Exception):
 
 @dataclass(frozen=True)
 class Setting:
-    """A setting, read from its flag, then its environment variable, then saved settings, then its default.
+    """A setting, read from its flag, then saved settings, then its default.
 
     A value given must match pattern, when the setting has one; example shows a value that does. label names the
     setting when setup asks for it.
     """
 
     name: str
-    env_variable: str
     label: str
     description: str
     default: str | None = None
@@ -55,24 +54,22 @@ class Setting:
 
 
 SETTINGS = (
-    Setting("api_key", "EBIRDAPIKEY", "eBird API key", "eBird API key", required=True),
+    Setting("api_key", "eBird API key", "eBird API key", required=True),
     Setting(
         "region",
-        "EBIRDDEFAULTREGION",
         "Home Region",
         "Home Region, an eBird subnational level 2 region code",
         required=True,
         pattern=REGION_PATTERN,
         example="CA-QC-MR",
     ),
-    Setting("locale", "EBIRDLOCALE", "Locale", "Locale", default="fr"),
-    Setting("lat", "EBIRDLAT", "Latitude", "Latitude"),
-    Setting("long", "EBIRDLONG", "Longitude", "Longitude"),
-    Setting("year_list", "EBIRDYEARLIST", "Year list path", "List of observations for the current year"),
-    Setting("life_list", "EBIRDLIFELIST", "Life list path", "List of lifetime observations"),
+    Setting("locale", "Locale", "Locale", default="fr"),
+    Setting("lat", "Latitude", "Latitude"),
+    Setting("long", "Longitude", "Longitude"),
+    Setting("year_list", "Year list path", "List of observations for the current year"),
+    Setting("life_list", "Life list path", "List of lifetime observations"),
     Setting(
         "aggregations",
-        "EBIRDAGGREGATIONS",
         "Aggregations path",
         "Path to aggregations JSON file (named groups of Hotspots)",
     ),
@@ -131,8 +128,7 @@ def add_arguments(parser: argparse.ArgumentParser):
             setting.flag,
             dest=setting.name,
             type=argument_type(setting),
-            help=f"{setting.description} (or {setting.env_variable}, or saved settings"
-            + (f", or {setting.default})" if setting.default else ")"),
+            help=f"{setting.description} (or saved settings" + (f", or {setting.default})" if setting.default else ")"),
         )
 
 
@@ -145,24 +141,24 @@ def argument_type(setting: Setting):
     return check
 
 
-def supplied(args: argparse.Namespace, environ: Mapping[str, str]) -> dict[str, str]:
-    """The value each setting gets from its flag or, without one, its environment variable."""
+def supplied(args: argparse.Namespace) -> dict[str, str]:
+    """The value each setting gets from its flag."""
     values = {}
     for setting in SETTINGS:
-        value = getattr(args, setting.name, None) or environ.get(setting.env_variable)
+        value = getattr(args, setting.name, None)
         if value:
             values[setting.name] = value
     return values
 
 
-def resolve(args: argparse.Namespace, environ: Mapping[str, str], saved: Mapping[str, str] | None) -> Settings:
-    """Each setting from its flag, else its environment variable, else saved settings, else its default."""
-    values = {**(saved or {}), **supplied(args, environ)}
+def resolve(args: argparse.Namespace, saved: Mapping[str, str] | None) -> Settings:
+    """Each setting from its flag, else saved settings, else its default."""
+    values = {**(saved or {}), **supplied(args)}
     resolved = {}
     for setting in SETTINGS:
         value = values.get(setting.name) or setting.default
         if value is None and setting.required:
-            raise SettingsError(f"{setting.flag} is required: set it, {setting.env_variable} or saved settings")
+            raise SettingsError(f"{setting.flag} is required: set it or run ebird-cli settings")
         if value is not None and not setting.accepts(value):
             raise SettingsError(f"{setting.flag}: invalid value {value!r}")
         resolved[setting.name] = value
@@ -201,11 +197,10 @@ def first_launch_setup(settings_file: SettingsFile, prefill: Mapping[str, str], 
     return answers
 
 
-def reconfigure(settings_file: SettingsFile, ask: Ask, environ: Mapping[str, str]) -> bool:
+def reconfigure(settings_file: SettingsFile, ask: Ask) -> bool:
     """Rerun setup pre-filled with the saved settings and overwrite them; returns whether they were saved.
 
-    Unreadable saved settings pre-fill nothing. Interrupting leaves them untouched. After saving, names each saved
-    setting that an environment variable overrides.
+    Unreadable saved settings pre-fill nothing. Interrupting leaves them untouched.
     """
     try:
         saved = settings_file.load() or {}
@@ -218,7 +213,4 @@ def reconfigure(settings_file: SettingsFile, ask: Ask, environ: Mapping[str, str
         return False
     settings_file.save(answers)
     print(f"Settings saved to {settings_file.path}.")
-    for setting in SETTINGS:
-        if setting.name in answers and environ.get(setting.env_variable):
-            print(f"{setting.env_variable} is set, so it overrides the saved {setting.label}.")
     return True

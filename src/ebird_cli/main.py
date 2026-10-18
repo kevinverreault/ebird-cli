@@ -1,5 +1,4 @@
 import argparse
-import os
 import ssl
 import urllib.request
 from importlib.metadata import version
@@ -95,7 +94,7 @@ def setup_parser(parser: argparse.ArgumentParser):
 def read_settings(parser: argparse.ArgumentParser, args: argparse.Namespace, saved) -> Settings:
     """The settings of this launch, exiting with a usage error when they cannot start it."""
     try:
-        return resolve(args, os.environ, saved)
+        return resolve(args, saved)
     except SettingsError as e:
         parser.error(e.message)
 
@@ -109,7 +108,7 @@ def main(argv: list[str] | None = None, ask: Ask = ask_in_terminal, settings_fil
 
     settings_file = settings_file or SettingsFile()
     if args.command == "settings":
-        reconfigure(settings_file, ask, os.environ)
+        reconfigure(settings_file, ask)
         return
 
     try:
@@ -117,7 +116,7 @@ def main(argv: list[str] | None = None, ask: Ask = ask_in_terminal, settings_fil
     except SettingsError as e:
         parser.error(e.message)
     if saved is None:
-        saved = first_launch_setup(settings_file, supplied(args, os.environ), ask)
+        saved = first_launch_setup(settings_file, supplied(args), ask)
         if saved is None:
             return
 
@@ -149,7 +148,7 @@ def main(argv: list[str] | None = None, ask: Ask = ask_in_terminal, settings_fil
         for command in [
             RecentCommand(observation_query, location_catalogue, printing_service, taxonomy_service),
             NotableCommand(observation_query, location_catalogue, printing_service),
-            SettingsCommand(lambda: reconfigure(settings_file, ask, os.environ)),
+            SettingsCommand(lambda: reconfigure(settings_file, ask)),
         ]
     }
 

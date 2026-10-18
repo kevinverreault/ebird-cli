@@ -70,7 +70,7 @@ def test_command_error_is_reported_without_ending_the_session(make_cli, capsys):
 
     assert handle_input("recent nearby", cli.commands, PROGRAM_ARGS) is True
     assert capsys.readouterr().out == (
-        "An error occurred: nearby needs coordinates: set --lat and --long, or EBIRDLAT and EBIRDLONG\n"
+        "An error occurred: nearby needs coordinates: set --lat and --long, or save them with settings\n"
     )
 
 
@@ -135,19 +135,6 @@ def test_settings_reconfigures_and_says_the_changes_apply_on_the_next_launch(mak
         "Changes apply on the next launch.",
     ]
     assert cli.client.calls == []
-
-
-def test_settings_names_the_saved_settings_environment_variables_override(make_cli, capsys, monkeypatch):
-    monkeypatch.setenv("EBIRDAPIKEY", "env-key")
-    cli = make_cli(ask=ScriptedAsk(*NEW_ANSWERS))
-
-    handle_input("settings", cli.commands, PROGRAM_ARGS)
-
-    assert capsys.readouterr().out.splitlines()[-3:] == [
-        f"Settings saved to {cli.settings_file.path}.",
-        "EBIRDAPIKEY is set, so it overrides the saved eBird API key.",
-        "Changes apply on the next launch.",
-    ]
 
 
 @pytest.mark.parametrize("interrupt", [KeyboardInterrupt, EOFError])
