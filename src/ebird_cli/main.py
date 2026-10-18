@@ -22,7 +22,17 @@ from .services.location_catalogue import LocationCatalogue
 from .services.observation_query import ObservationQuery
 from .services.printing import PrintingService
 from .services.taxonomy import TaxonomyService
-from .settings import Settings, SettingsError, add_arguments, resolve
+from .settings import (
+    Ask,
+    Settings,
+    SettingsError,
+    SettingsFile,
+    add_arguments,
+    ask_in_terminal,
+    first_launch_setup,
+    resolve,
+    supplied,
+)
 from .utils.logger import configure_logging
 
 
@@ -86,13 +96,24 @@ def read_settings(parser: argparse.ArgumentParser, args: argparse.Namespace, sav
         parser.error(e.message)
 
 
-def main():
+def main(argv: list[str] | None = None, ask: Ask = ask_in_terminal, settings_file: SettingsFile | None = None):
     configure_logging()
 
     parser = argparse.ArgumentParser(description="eBird CLI")
     setup_parser(parser)
+    args = parser.parse_args(argv)
 
-    settings = read_settings(parser, parser.parse_args(), None)
+    settings_file = settings_file or SettingsFile()
+    try:
+        saved = settings_file.load()
+    except SettingsError as e:
+        parser.error(e.message)
+    if saved is None:
+        saved = first_launch_setup(settings_file, supplied(args, os.environ), ask)
+        if saved is None:
+            return
+
+    settings = read_settings(parser, args, saved)
 
     api_key = settings.api_key
     region = settings.region

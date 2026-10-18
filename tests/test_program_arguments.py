@@ -127,6 +127,42 @@ def test_api_key_and_region_are_optional_with_their_environment_variables(monkey
     assert (args.api_key, args.region) == ("env-key", "CA-QC-MR")
 
 
+SAVED = {
+    "api_key": "saved-key",
+    "region": "CA-QC-CN",
+    "locale": "es",
+    "lat": "48.13",
+    "long": "-69.72",
+    "year_list": "saved/year_list.csv",
+    "life_list": "saved/life_list.csv",
+    "aggregations": "saved/aggregations.json",
+}
+
+
+def test_saved_settings_supply_every_option_without_flags_or_environment_variables():
+    assert vars(parse(saved=SAVED)) == SAVED
+
+
+def test_environment_variables_override_saved_settings(monkeypatch):
+    for name, value in ENV_VARIABLES.items():
+        monkeypatch.setenv(name, value)
+
+    assert vars(parse(saved=SAVED)) == vars(parse())
+
+
+def test_flags_override_saved_settings():
+    args = parse("--api-key", "flag-key", "--region", "CA-QC-MR", "--locale", "en", saved=SAVED)
+
+    assert (args.api_key, args.region, args.locale, args.lat) == ("flag-key", "CA-QC-MR", "en", "48.13")
+
+
+def test_settings_missing_from_saved_settings_fall_back_to_their_default():
+    args = parse(saved={"api_key": "saved-key", "region": "CA-QC-CN"})
+
+    assert args.locale == "fr"
+    assert [args.lat, args.long, args.year_list, args.life_list, args.aggregations] == [None] * 5
+
+
 def test_version_prints_the_version_declared_in_pyproject(capsys):
     # Needs the package installed (pip install -e .): the version is read from its metadata
     with (Path(__file__).parent.parent / "pyproject.toml").open("rb") as pyproject:
