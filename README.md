@@ -2,6 +2,8 @@
 
 A command-line interface for exploring eBird bird observation data.
 
+![Notable observations in a region, with life and year list targets highlighted](docs/demo/overview.gif)
+
 ## Prerequisites
 
 - Python 3.10+
@@ -59,6 +61,12 @@ When launched, the CLI will display a menu of available commands:
 - `recent <scope, -region> [-back, -species]`: Fetch recent bird observations
 - `notable <scope, -region> [-back]`: Fetch notable bird observations
 
+### Autocompletion
+
+Suggestions appear as you type: command names, scopes, flags, region names for the chosen scope, species names and `-back` values. Press Tab to accept the first suggestion, or press it again to cycle through them.
+
+![Building a full command from autocompletion suggestions](docs/demo/autocomplete.gif)
+
 ### Search Scopes
 
 Bird observations can be searched in multiple scopes.
@@ -78,6 +86,8 @@ Bird observations can be searched in multiple scopes.
    - `recent subnational -region Québec`
 
 The `-region` flag supports context-sensitive autocompletion based on the selected scope. If no `-region` flag is provided, default region will be used.
+
+![Autocompleting a hotspot name and fetching its recent observations](docs/demo/hotspot-autocomplete.gif)
 
 ### Search length
 
@@ -126,6 +136,8 @@ recent regional -region Montréal -species Harfang des neiges
 ```
 
 The `-species` flag supports context-sensitive autocompletion using the cached taxonomy. Start typing a common name and press Tab to see matching species.
+
+![Autocompleting a species name and filtering recent observations to it](docs/demo/species-filter.gif)
 
 > **Note:** Autocompletion and lookup use the locale specified by `--locale` / `EBIRDLOCALE`. Species names must be typed in the configured locale.
 
@@ -190,6 +202,22 @@ Tests live in `tests/`, mirroring the source layout:
 - `tests/fixtures/`: small hand-written cache, list and aggregation files for the `CA-QC-MR` region
 
 Tests named `..._currently_...` pin behaviour that looks accidental, so changing it is a deliberate test change.
+
+### Demo GIFs
+
+The GIFs in this README are recorded with [VHS](https://github.com/charmbracelet/vhs) from the tapes in `docs/demo/`. They call the live eBird API, so they need your API key and environment variables set. `config.tape` holds the shared settings and launches the CLI out of frame.
+
+On Windows, install VHS and its terminal dependency, then re-record a GIF from the repository root:
+
+```bash
+winget install charmbracelet.vhs tsl0922.ttyd
+```
+
+```bash
+vhs docs/demo/overview.tape
+```
+
+VHS also needs `ffmpeg` on the `PATH`.
 
 ## Credits
 
