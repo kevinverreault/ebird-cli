@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from colorama import Fore
@@ -148,3 +149,15 @@ class NotableCommand(ObservationCommand):
             observation_query,
             printing_service,
         )
+
+
+class SettingsCommand(Command):
+    """Reconfigure the saved settings without leaving the prompt; this session keeps the settings it started with."""
+
+    def __init__(self, reconfigure: Callable[[], bool]):
+        super().__init__("settings", "Change the saved settings for the next launch", Grammar([], []))
+        self.reconfigure = reconfigure
+
+    def run(self, _arguments: Arguments):
+        if self.reconfigure():
+            print("Changes apply on the next launch.")

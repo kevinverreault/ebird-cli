@@ -24,8 +24,6 @@ def ebird(monkeypatch):
     def forbidden(*_args, **_kwargs):
         raise AssertionError("the launch went past creating the eBird client")
 
-    for setting in SETTINGS:
-        monkeypatch.delenv(setting.env_variable, raising=False)
     monkeypatch.setattr(main_module, "configure_logging", lambda: None)
     monkeypatch.setattr(main_module, "use_certifi_ca_bundle", lambda: None)
     monkeypatch.setattr(main_module, "EbirdClient", client)

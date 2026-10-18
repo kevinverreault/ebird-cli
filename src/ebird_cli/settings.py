@@ -74,7 +74,7 @@ SETTINGS = (
         "aggregations",
         "EBIRDAGGREGATIONS",
         "Aggregations path",
-        "Path to aggregations JSON file (custom hotspot groups)",
+        "Path to aggregations JSON file (named groups of Hotspots)",
     ),
 )
 
@@ -112,9 +112,12 @@ class SettingsFile:
         if not self.path.exists():
             return None
         try:
-            return json.loads(self.path.read_text(encoding="utf-8"))
+            saved = json.loads(self.path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
             raise SettingsError(f"saved settings in {self.path} are not valid JSON: {e}") from e
+        if not isinstance(saved, dict) or not all(isinstance(value, str) for value in saved.values()):
+            raise SettingsError(f"saved settings in {self.path} must be a JSON object of text values")
+        return saved
 
     def save(self, values: Mapping[str, str]):
         self.path.parent.mkdir(parents=True, exist_ok=True)
