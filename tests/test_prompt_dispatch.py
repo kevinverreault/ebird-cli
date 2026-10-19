@@ -26,6 +26,13 @@ def test_empty_input_reprints_the_menu_and_continues(cli, capsys):
     assert "Available commands:" in menu
 
 
+def test_menu_header_shows_the_version_declared_in_pyproject(cli, capsys, declared_version):
+    handle_input("", cli.commands, PROGRAM_ARGS)
+
+    lines = [line.strip() for line in strip_ansi(capsys.readouterr().out).splitlines()]
+    assert f"eBird CLI {declared_version}" in lines
+
+
 def test_menu_lists_each_commands_mandatory_and_optional_parameters(cli, capsys):
     handle_input("", cli.commands, PROGRAM_ARGS)
 

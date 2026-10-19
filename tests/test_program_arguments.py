@@ -1,6 +1,4 @@
 import argparse
-import tomllib
-from pathlib import Path
 
 import pytest
 
@@ -111,11 +109,7 @@ def test_settings_missing_from_saved_settings_fall_back_to_their_default():
     assert [args.lat, args.long, args.year_list, args.life_list, args.aggregations] == [None] * 5
 
 
-def test_version_prints_the_version_declared_in_pyproject(capsys):
-    # Needs the package installed (pip install -e .): the version is read from its metadata
-    with (Path(__file__).parent.parent / "pyproject.toml").open("rb") as pyproject:
-        declared_version = tomllib.load(pyproject)["project"]["version"]
-
+def test_version_prints_the_version_declared_in_pyproject(capsys, declared_version):
     with pytest.raises(SystemExit) as exit_info:
         parse("--version")
 

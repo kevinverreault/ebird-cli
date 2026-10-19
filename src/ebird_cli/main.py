@@ -52,7 +52,7 @@ def print_menu(commands, args=None):
         args_section = "\n    Arguments:\n    \n    " + "\n    ".join(arg_lines) + "\n    "
 
     menu = f"""
-    {Fore.GREEN}eBird CLI{Fore.RESET}
+    {Fore.GREEN}eBird CLI{Fore.RESET} {version("ebird-cli")}
     {args_section}
     Available commands:
 

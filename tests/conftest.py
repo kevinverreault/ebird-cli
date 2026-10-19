@@ -1,5 +1,6 @@
 import re
 import shutil
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,6 +36,16 @@ ANSI_COLORS = {"31": "red", "32": "green", "37": "white"}
 def copy_fixture_cache(cache_dir: Path):
     """Copy the fixture cache into cache_dir as if just written, so no cached file has expired."""
     shutil.copytree(FIXTURES / "cache", cache_dir, dirs_exist_ok=True, copy_function=shutil.copy)
+
+
+@pytest.fixture
+def declared_version() -> str:
+    """The version pyproject.toml declares.
+
+    The app reads its version from the installed metadata, so tests comparing against this need pip install -e .
+    """
+    with (Path(__file__).parent.parent / "pyproject.toml").open("rb") as pyproject:
+        return tomllib.load(pyproject)["project"]["version"]
 
 
 @pytest.fixture(autouse=True)
