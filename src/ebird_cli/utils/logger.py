@@ -7,7 +7,10 @@ logger = logging.getLogger("ebird_cli_logger")
 
 
 def configure_logging(log_dir: str | None = None):
-    """Append the app log to app.log in log_dir, the user log directory by default. Called at launch, not import."""
+    """Append the app log to app.log in log_dir, the user log directory by default.
+
+    Called at launch with --log, never at import.
+    """
     log_dir = log_dir or user_log_dir("ebird_cli")
     os.makedirs(log_dir, exist_ok=True)
 

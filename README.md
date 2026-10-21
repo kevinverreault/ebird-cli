@@ -7,7 +7,7 @@ A command-line interface for exploring eBird bird observation data.
 ## Prerequisites
 
 - Python 3.11+
-- eBird API Key (obtainable with free eBird account)
+- An eBird API key and the code of your Home Region, the only two required settings (see [eBird API key and codes](#ebird-api-key-and-codes))
 
 ## Installation
 
@@ -21,9 +21,21 @@ A command-line interface for exploring eBird bird observation data.
    ```
 2. Run `ebird-cli`. The first launch asks for your eBird API key, Home Region and the other settings, and saves them (see [First-launch setup](#first-launch-setup))
 
-To upgrade to the latest release, run `pip install --upgrade ebird-cli` (or `pipx upgrade ebird-cli`). To work on the code instead, see [Development setup](#development-setup).
+To upgrade to the latest release, run `pip install --upgrade ebird-cli` (or `pipx upgrade ebird-cli`). To work on the code instead, see [Development](#development).
 
 ## Configuration
+
+Only two settings are required:
+
+- **eBird API key**: lets the CLI call the eBird API
+- **Home Region**: the eBird region code of your county or regional municipality, like `CA-QC-MR` or `US-NY-061`, which every query uses unless you name another region or hotspot
+
+Every other setting is optional and turns on one feature:
+
+- **Locale**: the language of species names (default `fr`)
+- **Latitude** and **longitude**: the [`nearby` scope](#search-scopes)
+- **Year list** and **life list**: [list highlighting](#list-highlighting)
+- **Aggregations**: [your own groups of hotspots](#aggregations)
 
 Each setting is read from the first of these sources that has it:
 
@@ -31,11 +43,20 @@ Each setting is read from the first of these sources that has it:
 2. the saved settings
 3. its default (only the locale has one: `fr`)
 
-The eBird API key and the Home Region are required, but the saved settings always hold them once first-launch setup is done.
+Once first-launch setup is done, the saved settings always hold the two required ones.
+
+### eBird API key and codes
+
+eBird names every region and hotspot with a code, which you can read from the address of its page on [ebird.org](https://ebird.org):
+
+- **Region codes** name a country (`CA`), a subnational level 1 region such as a state or province (`CA-QC`), or a subnational level 2 region such as a county or regional municipality (`CA-QC-MR`). Your Home Region must be a subnational level 2 code. To find it, search for your county on [eBird's Explore page](https://ebird.org/explore) and open it: the code follows `/region/` in its page address, as in `https://ebird.org/region/CA-QC-MR`.
+- **Location IDs** name a hotspot and start with `L`, as in `L1234567`. Open the hotspot's page on eBird: the ID follows `/hotspot/` in its address, as in `https://ebird.org/hotspot/L1234567`. You only need them for [aggregations](#aggregations); the CLI looks hotspots up by name.
+
+To get an API key, sign in to your free eBird account and request one at [ebird.org/api/keygen](https://ebird.org/api/keygen). eBird shows the key on that page.
 
 ### First-launch setup
 
-The first time `ebird-cli` starts without saved settings, it asks for each setting before it contacts eBird: eBird API key, Home Region, locale, latitude, longitude, year list path, life list path and aggregations path. Each answer is pre-filled with the value a command-line argument already gives it, so press Enter to keep it. The API key and the Home Region (a subnational level 2 code like `CA-QC-MR` or `US-NY-061`) are required; leave any other setting empty with Enter. Interrupting setup with Ctrl+C (or Ctrl+D on an empty answer) saves nothing, and setup starts again on the next launch.
+The first time `ebird-cli` starts without saved settings, it asks for each setting before it contacts eBird: eBird API key, Home Region, locale, latitude, longitude, year list path, life list path and aggregations path. Each answer is pre-filled with the value a command-line argument already gives it, so press Enter to keep it. The API key and the Home Region (a subnational level 2 code like `CA-QC-MR` or `US-NY-061`; see [eBird API key and codes](#ebird-api-key-and-codes)) are required; leave any other setting empty with Enter. Interrupting setup with Ctrl+C (or Ctrl+D on an empty answer) saves nothing, and setup starts again on the next launch.
 
 The answers are saved to `settings.json` in the platform-appropriate user config directory, and every later launch reads them without asking again:
 
@@ -69,6 +90,7 @@ The CLI supports the following arguments:
 | `--year-list`    | Path to year observations list        | saved settings       | No       |
 | `--life-list`    | Path to lifetime observations list    | saved settings       | No       |
 | `--aggregations` | Path to aggregations JSON file        | saved settings       | No       |
+| `--log`          | Write a log file for this launch      | off                  | No       |
 
 ## Usage
 
@@ -81,6 +103,8 @@ ebird-cli [optional arguments]
 Any argument overrides the saved setting for that launch only.
 
 `ebird-cli --version` prints the installed version.
+
+`ebird-cli --log` writes debug messages to a log file, which is off by default (see [Log file](https://github.com/kevinverreault/ebird-cli/blob/main/DEVELOPMENT.md#log-file)).
 
 ### Available Commands
 
@@ -133,13 +157,15 @@ Use the optional `-back` parameter to change the number of days back to fetch ob
 
 Aggregations allow you to define custom named groups of hotspots that appear alongside eBird hotspots when using the `hotspot` scope. This is useful for combining multiple nearby locations under a single name.
 
+Aggregations are similar to eBird's hotspot groups, but you set them yourself in a file, while eBird's regional administrators manage hotspot groups. Use one to group hotspots that eBird does not, or to name the group the way you like.
+
 Provide the path to your aggregations file at setup, or via `--aggregations`:
 
 ```bash
 ebird-cli --aggregations ~/ebird_data/aggregations.json
 ```
 
-The aggregations file is a JSON array where each element maps a custom name to a list of eBird location IDs:
+The aggregations file is a JSON array where each element maps a custom name to a list of eBird [location IDs](#ebird-api-key-and-codes):
 
 ```json
 [
@@ -200,85 +226,9 @@ The following data is cached:
 
 Hotspots are fetched again on launch once their cached file is more than 30 days old, so new hotspots appear; if eBird can't be reached, the older file is used. All other cached data is written once and reused on every subsequent launch. To force a refresh (e.g. after a new eBird taxonomy release or a region change), delete the relevant files or the entire cache directory; your saved settings live outside it and are kept (on Windows, delete the `Cache` folder, not its parent, which holds `settings.json`).
 
-## Log file
+## Development
 
-Each launch appends debug messages to `app.log` in the platform-appropriate user log directory, created on first launch:
-
-- Windows: `%LOCALAPPDATA%\ebird_cli\ebird_cli\Logs\app.log`
-- Linux: `~/.cache/ebird_cli/log/app.log` (under `$XDG_CACHE_HOME` instead of `~/.cache` when it is set)
-- macOS: `~/Library/Logs/ebird_cli/app.log`
-
-The file is never rotated or trimmed; delete it at any time.
-
-## Development setup
-
-### Virtual environment
-
-1. Clone the repository and create a virtual environment in it:
-   ```bash
-   git clone https://github.com/kevinverreault/ebird-cli.git
-   cd ebird-cli
-   python -m venv venv
-   ```
-
-2. Activate the virtual environment:
-   - On Windows: `venv\Scripts\activate`
-   - On macOS/Linux: `source venv/bin/activate`
-
-3. Install the project in editable mode with the dev tools (`requirements-dev.txt` adds the test, lint and build tools to the pinned runtime dependencies):
-   ```bash
-   pip install -e . -r requirements-dev.txt
-   ```
-   The tests read the version from the installed package, so they need this editable install.
-
-### Tests
-
-The test suite runs offline: it never calls the eBird API, needs no API key and never touches your user cache, log or config directory.
-
-```bash
-python -m pytest
-```
-
-Tests live in `tests/`, mirroring the source layout:
-
-- `tests/cli/`: the `recent` and `notable` commands and autocompletion, driven through their public entry points
-- `tests/services/`, `tests/domain/`: cache, location and taxonomy services and domain value parsing
-- `tests/utils/`: where the app log is written
-- `tests/test_prompt_dispatch.py`, `tests/test_program_arguments.py`: prompt input handling and program arguments
-- `tests/test_settings.py`, `tests/test_launch.py`: the setup questions and settings file, and launching with or without saved settings
-- `tests/conftest.py`: shared fixtures, including `make_cli`, which wires real services and commands the way `main` does
-- `tests/fakes.py`: the test doubles: the in-memory fake eBird client, a fake HTTP session and scripted answers to the setup questions
-- `tests/fixtures/`: small hand-written cache, list and aggregation files for the `CA-QC-MR` region
-
-Tests named `..._currently_...` pin behaviour that looks accidental, so changing it is a deliberate test change.
-
-### Demo GIFs
-
-The GIFs in this README are recorded with [VHS](https://github.com/charmbracelet/vhs) from the tapes in `docs/demo/`. They call the live eBird API, so they need saved settings with your API key. `config.tape` holds the shared settings and launches the CLI out of frame.
-
-On Windows, install VHS and its terminal dependency, then re-record a GIF from the repository root:
-
-```bash
-winget install charmbracelet.vhs tsl0922.ttyd
-```
-
-```bash
-vhs docs/demo/overview.tape
-```
-
-VHS also needs `ffmpeg` on the `PATH`.
-
-### Cutting a release
-
-Releases are published to [PyPI](https://pypi.org/project/ebird-cli/) by the `Release` workflow (`.github/workflows/release.yml`) through trusted publishing; no API token is involved.
-
-1. Bump `version` in `pyproject.toml` and merge it to `main`.
-2. Optionally, do a dry run: run the `Release` workflow manually from the Actions tab. It uploads that version to [TestPyPI](https://test.pypi.org/project/ebird-cli/), which accepts each version only once. Check the upload installs:
-   ```bash
-   pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ ebird-cli
-   ```
-3. Tag the release commit `vX.Y.Z`, matching the version, and push the tag.
-4. Publish a GitHub release from that tag. The workflow uploads it to PyPI, and fails without uploading if the tag doesn't match the version in `pyproject.toml`.
+To work on the code, run the tests, re-record the demo GIFs, turn on the log file or cut a release, see [DEVELOPMENT.md](https://github.com/kevinverreault/ebird-cli/blob/main/DEVELOPMENT.md).
 
 ## Credits
 

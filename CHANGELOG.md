@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Added
 
 - The start menu shows the installed version next to the title.
+- `--log` turns on the log file for that launch.
+
+### Changed
+
+- The log file is off by default: launches write no `app.log` unless started with `--log`.
+- The README says which settings are required and how to find eBird region codes, location IDs and an API key. Development, tests, demo GIFs, the log file and releases moved to `DEVELOPMENT.md`.
 
 ## [0.2.0] - 2026-10-18
 

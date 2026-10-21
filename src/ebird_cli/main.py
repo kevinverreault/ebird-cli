@@ -85,6 +85,7 @@ def use_certifi_ca_bundle():
 
 def setup_parser(parser: argparse.ArgumentParser):
     parser.add_argument("--version", action="version", version=f"ebird-cli {version('ebird-cli')}")
+    parser.add_argument("--log", action="store_true", help="append debug messages to app.log in the user log directory")
     add_arguments(parser)
 
     commands = parser.add_subparsers(dest="command", title="commands")
@@ -100,11 +101,11 @@ def read_settings(parser: argparse.ArgumentParser, args: argparse.Namespace, sav
 
 
 def main(argv: list[str] | None = None, ask: Ask = ask_in_terminal, settings_file: SettingsFile | None = None):
-    configure_logging()
-
     parser = argparse.ArgumentParser(description="eBird CLI")
     setup_parser(parser)
     args = parser.parse_args(argv)
+    if args.log:
+        configure_logging()
 
     settings_file = settings_file or SettingsFile()
     if args.command == "settings":

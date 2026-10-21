@@ -17,8 +17,8 @@ A public eBird birding site with its own location id (`L…`), lying inside a Re
 _Avoid_: site, spot
 
 **Aggregation**:
-A user-defined, named group of Hotspots that is treated as a single Hotspot.
-_Avoid_: hotspot group, cluster
+A user-defined, named group of Hotspots that is treated as a single Hotspot. Unlike an eBird hotspot group, which eBird's regional administrators manage, the user sets it in their aggregations file.
+_Avoid_: hotspot group (eBird's own concept), cluster
 
 **Location**:
 Any place the user can name in a query: a Region, a Hotspot or an Aggregation.

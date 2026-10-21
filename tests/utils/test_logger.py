@@ -5,8 +5,10 @@ import sys
 from pathlib import Path
 
 import pytest
+from fakes import ScriptedAsk
 
 from ebird_cli.main import main
+from ebird_cli.settings import SettingsFile
 from ebird_cli.utils import logger as logger_module
 from ebird_cli.utils.logger import configure_logging, logger
 
@@ -41,18 +43,34 @@ def test_appends_to_the_log_of_previous_launches(tmp_path):
     assert "this launch" in lines[1]
 
 
-def test_launching_logs_to_the_user_log_directory_not_the_working_directory(tmp_path, monkeypatch):
+def launch(argv, tmp_path, monkeypatch):
+    """Launch `ebird-cli settings` with argv, interrupted at its first question, from an empty working directory."""
     user_logs = tmp_path / "user-logs"
     working_dir = tmp_path / "work"
     working_dir.mkdir()
     monkeypatch.chdir(working_dir)
     monkeypatch.setattr(logger_module, "user_log_dir", lambda appname: str(user_logs / appname))
-    monkeypatch.setattr(sys, "argv", ["ebird-cli", "--help"])
 
-    with pytest.raises(SystemExit):
-        main()
+    settings_file = SettingsFile(tmp_path / "settings.json")
 
-    assert (user_logs / "ebird_cli").is_dir()
+    main([*argv, "settings"], ask=ScriptedAsk(KeyboardInterrupt), settings_file=settings_file)
+
+    return user_logs / "ebird_cli", working_dir
+
+
+def test_launching_writes_no_log_by_default(tmp_path, monkeypatch):
+    log_dir, working_dir = launch([], tmp_path, monkeypatch)
+
+    assert not log_dir.exists()
+    assert list(working_dir.iterdir()) == []
+    assert logger.handlers == []
+
+
+def test_launching_with_log_logs_to_the_user_log_directory_not_the_working_directory(tmp_path, monkeypatch):
+    log_dir, working_dir = launch(["--log"], tmp_path, monkeypatch)
+    logger.debug("user input: recent")
+
+    assert "user input: recent" in (log_dir / "app.log").read_text(encoding="utf-8")
     assert list(working_dir.iterdir()) == []
 
 
