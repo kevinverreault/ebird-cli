@@ -114,7 +114,7 @@ def test_recent_species_nearby_requests_species_observations_around_the_coordina
 
     make_query(client).observations(ObservationKind.RECENT, RegionalScopes.NEARBY, species_code="mallar3")
 
-    assert client.calls == [Call("get_nearby_species", ("mallar3", LAT, LONG, 25), back=7, hotspot=True)]
+    assert client.calls == [Call("get_nearby_species", ("mallar3", LAT, LONG, 50), back=7, hotspot=True)]
 
 
 @pytest.mark.parametrize("scope", [RegionalScopes.NEARBY, RegionalScopes.REGIONAL])
