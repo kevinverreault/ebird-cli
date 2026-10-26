@@ -102,7 +102,7 @@ def test_recent_species_without_region_uses_the_default_region(cli):
 def test_recent_nearby_species_requests_nearby_species_observations(cli):
     cli.run("recent nearby -species Canard colvert")
 
-    assert cli.client.calls == [Call("get_nearby_species", ("mallar3", LAT, LONG, 25), back="7", hotspot=True)]
+    assert cli.client.calls == [Call("get_nearby_species", ("mallar3", LAT, LONG, 50), back="7", hotspot=True)]
 
 
 @pytest.mark.parametrize("species", ["Hibou des marais", "harfang des neiges", "Harfang"])

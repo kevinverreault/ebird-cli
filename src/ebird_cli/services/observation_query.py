@@ -7,8 +7,6 @@ from .location_catalogue import LocationCatalogue
 
 DEFAULT_DAYS = 7
 NEARBY_DISTANCE_KM = 50
-# Nearby species queries have always used the eBird client's default radius rather than NEARBY_DISTANCE_KM.
-NEARBY_SPECIES_DISTANCE_KM = 25
 
 
 class ObservationKind(StrEnum):
@@ -83,7 +81,7 @@ class ObservationQuery:
         """Reports of one species, as eBird returned them."""
         if scope == RegionalScopes.NEARBY:
             results = self.client.get_nearby_species(
-                species_code, *self.coordinates(), dist=NEARBY_SPECIES_DISTANCE_KM, back=back, hotspot=True
+                species_code, *self.coordinates(), dist=NEARBY_DISTANCE_KM, back=back, hotspot=True
             )
         else:
             results = self.client.get_species_observations(
