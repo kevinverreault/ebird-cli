@@ -12,7 +12,8 @@ def cli(make_cli):
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        ("", ["recent", "notable", "settings", "exit"]),
+        ("", ["recent", "notable", "find", "settings", "exit"]),
+        ("f", ["find"]),
         ("re", ["recent"]),
         ("NO", ["notable"]),
         ("se", ["settings"]),

@@ -2,8 +2,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from colorama import Fore
+from prompt_toolkit.completion import Completion
 from prompt_toolkit.document import Document
 
+from ..domain.match import contains
 from ..domain.regional_scopes import RegionalScopes
 from ..services.location_catalogue import LocationCatalogue
 from ..services.observation_query import ObservationKind, ObservationQuery
@@ -149,6 +151,33 @@ class NotableCommand(ObservationCommand):
             observation_query,
             printing_service,
         )
+
+
+class FindCommand(Command):
+    """Find text in the Last result, without contacting eBird."""
+
+    def __init__(self, printing_service: PrintingService):
+        super().__init__("find", "Find text in the observations of the last recent or notable command", Grammar([], []))
+        self.printing_service = printing_service
+
+    def handle_command(self, *args):
+        logger.debug(f"user input: {args}")
+        self.printing_service.print_matches(" ".join(args))
+
+    def command_example(self):
+        command_name = f"{Fore.RED}{self.command_name}{Fore.RESET}"
+        return f"{command_name:18} {Fore.CYAN}[text]{Fore.RESET} (Ctrl+F)"
+
+    def get_completions(self, document: Document, _complete_event):
+        """The species, then the location names of the Last result containing what was typed after find."""
+        _command_name, _, typed = document.text_before_cursor.partition(" ")
+        typed = typed.lstrip()
+        logger.debug(f"find get_completions: {typed}")
+        observations = self.printing_service.last_result or []
+        names = dict.fromkeys([obs.name for obs in observations] + [obs.location for obs in observations])
+        for name in names:
+            if contains(name, " ".join(typed.split())):
+                yield Completion(name, start_position=-len(typed))
 
 
 class SettingsCommand(Command):

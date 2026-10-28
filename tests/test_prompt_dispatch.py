@@ -39,6 +39,7 @@ def test_menu_lists_each_commands_mandatory_and_optional_parameters(cli, capsys)
     lines = [" ".join(line.split()) for line in strip_ansi(capsys.readouterr().out).splitlines()]
     assert "recent <scope> [-region, -species, -back]" in lines
     assert "notable <scope> [-region, -back]" in lines
+    assert "find [text] (Ctrl+F)" in lines
     assert "settings" in lines
 
 

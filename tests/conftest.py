@@ -13,7 +13,7 @@ from rich.console import Console
 from ebird_cli import download_lists as download_lists_module
 from ebird_cli import settings as settings_module
 from ebird_cli.cli.autocomplete import ContextSensitiveCompleter
-from ebird_cli.cli.command import NotableCommand, RecentCommand, SettingsCommand
+from ebird_cli.cli.command import FindCommand, NotableCommand, RecentCommand, SettingsCommand
 from ebird_cli.domain.region import Region
 from ebird_cli.services import cache as cache_module
 from ebird_cli.services.cache import CacheService
@@ -132,6 +132,7 @@ def make_cli(tmp_path):
             for command in [
                 RecentCommand(observation_query, location_catalogue, printing_service, taxonomy_service),
                 NotableCommand(observation_query, location_catalogue, printing_service),
+                FindCommand(printing_service),
                 SettingsCommand(lambda: reconfigure(settings_file, ask)),
             ]
         }
