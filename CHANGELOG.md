@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
-- `find [text]` shows only the observations of the last `recent` or `notable` command whose species, location or region contains the text, ignoring case and accents, with the text highlighted. Ctrl+F starts a find.
+- `find [text]` shows only the observations of the last `recent` or `notable` command whose species, location or region contains the text, ignoring case and accents. Ctrl+F starts a find.
 
 ## [0.3.0] - 2026-10-26
 

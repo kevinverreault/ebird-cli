@@ -214,7 +214,7 @@ find bécasseau
 find marais
 ```
 
-- It shows only the observations whose species name, location or region contains the text, with each occurrence in reverse video. Life and year list targets keep their red and green.
+- It shows only the observations whose species name, location or region contains the text, with life and year list targets in their usual red and green.
 - Case and accents are ignored: `find becasseau` matches "Bécasseau semipalmé". Several words are found as one phrase.
 - The table keeps the columns of the last result, and its total reads like `Total: 3 of 142`.
 - Each `find` searches the whole last result, not the previous find. A `recent` or `notable` command that fails leaves it as it was; one that shows no observations replaces it.

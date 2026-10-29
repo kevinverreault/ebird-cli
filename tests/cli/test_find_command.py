@@ -1,8 +1,7 @@
 import argparse
-import re
 
 import pytest
-from conftest import ANSI_COLORS, FIXTURES, strip_ansi, table_rows
+from conftest import FIXTURES, highlight_of, strip_ansi, table_rows
 from fakes import FakeEbirdClient, observation
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import CompleteEvent
@@ -13,9 +12,6 @@ from prompt_toolkit.output import DummyOutput
 from ebird_cli.main import handle_input, setup_key_bindings
 
 PROGRAM_ARGS = argparse.Namespace(region="CA-QC-MR", locale="fr")
-
-ANSI_SEGMENT = re.compile(r"\x1b\[([0-9;]+)m([^\x1b]+)")
-REVERSE = "7"
 
 OBSERVATIONS = [
     observation("Canard colvert", "2026-10-12 07:00", loc_name="Étang Hertel"),
@@ -32,17 +28,6 @@ def found(make_cli, capsys, text, observations=OBSERVATIONS):
     capsys.readouterr()
     cli.run(f"find {text}")
     return capsys.readouterr().out
-
-
-def highlights(output: str) -> list[tuple[str, str | None]]:
-    """Each text printed in reverse video, with the colour it keeps (None when it has none)."""
-    found_highlights = []
-    for codes, text in ANSI_SEGMENT.findall(output):
-        codes = codes.split(";")
-        if REVERSE in codes:
-            colours = [ANSI_COLORS[code] for code in codes if code in ANSI_COLORS]
-            found_highlights.append((text, colours[0] if colours else None))
-    return found_highlights
 
 
 def test_find_prints_only_the_matching_observations_out_of_the_last_result(make_cli, capsys):
@@ -75,21 +60,11 @@ def test_find_matches_the_region(make_cli, capsys):
     ]
 
 
-def test_find_highlights_every_occurrence_in_each_column(make_cli, capsys):
-    output = found(make_cli, capsys, "an")
-
-    assert highlights(output) == [("an", "white"), ("an", None), ("an", "white")]
-
-
-def test_find_highlights_the_text_as_shown_with_its_accents(make_cli, capsys):
-    assert [text for text, _ in highlights(found(make_cli, capsys, "heron"))] == ["Héron"]
-
-
 @pytest.mark.parametrize(
-    ("list_option", "text", "highlight"),
-    [("life_list", "heron", ("Héron", "red")), ("year_list", "bleu", ("bleu", "green"))],
+    ("list_option", "text", "name", "colour"),
+    [("life_list", "heron", "Grand Héron", "red"), ("year_list", "bleu", "Geai bleu", "green")],
 )
-def test_find_highlight_keeps_the_life_and_year_target_colours(make_cli, capsys, list_option, text, highlight):
+def test_find_shows_matches_in_their_life_and_year_target_colours(make_cli, capsys, list_option, text, name, colour):
     cli = make_cli(
         FakeEbirdClient(get_observations=OBSERVATIONS), **{list_option: str(FIXTURES / f"{list_option}.csv")}
     )
@@ -98,7 +73,7 @@ def test_find_highlight_keeps_the_life_and_year_target_colours(make_cli, capsys,
 
     cli.run(f"find {text}")
 
-    assert highlights(capsys.readouterr().out) == [highlight]
+    assert highlight_of(name, capsys.readouterr().out) == colour
 
 
 def test_find_says_so_when_nothing_matches(make_cli, capsys):

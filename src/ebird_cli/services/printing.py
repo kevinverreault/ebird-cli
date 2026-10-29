@@ -2,7 +2,7 @@ from rich.console import Console, Text
 from rich.table import Table
 
 from ..domain.fields import ExportFields
-from ..domain.match import contains, spans
+from ..domain.match import contains
 from .dataframe import DataFrameService
 
 
@@ -35,15 +35,14 @@ class PrintingService(DataFrameService):
         if not matches:
             print(f'No observations match "{text}".')
             return
-        self.print_table(matches, self.shows_region(self.last_result), text)
+        self.print_table(matches, self.shows_region(self.last_result))
         print(f"Total: {len(matches)} of {len(self.last_result)}")
 
     @staticmethod
     def shows_region(observations: list) -> bool:
         return len({obs.subname for obs in observations}) > 1
 
-    def print_table(self, observations: list, show_region: bool, text: str = ""):
-        """Print the observations, with each occurrence of text in reverse video."""
+    def print_table(self, observations: list, show_region: bool):
         table = Table()
 
         table.add_column("Date", style="magenta")
@@ -54,13 +53,9 @@ class PrintingService(DataFrameService):
             table.add_column("Region")
 
         for observation in observations:
-            row = (
-                observation.observation_date,
-                highlight(self.get_observation_text(observation), text),
-                highlight(Text(observation.location), text),
-            )
+            row = (observation.observation_date, self.get_observation_text(observation), observation.location)
             if show_region:
-                row += (highlight(Text(observation.subname), text),)
+                row += (observation.subname,)
             table.add_row(*row)
 
         print()
@@ -83,10 +78,3 @@ class PrintingService(DataFrameService):
             style = "white"
 
         return Text(observation.name, style)
-
-
-def highlight(shown: Text, text: str) -> Text:
-    """Shown text with each occurrence of text in reverse video, which keeps its colour."""
-    for start, end in spans(shown.plain, text):
-        shown.stylize("reverse", start, end)
-    return shown
