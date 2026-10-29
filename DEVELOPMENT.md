@@ -31,7 +31,7 @@ python -m pytest
 
 Tests live in `tests/`, mirroring the source layout:
 
-- `tests/cli/`: the `recent` and `notable` commands and autocompletion, driven through their public entry points
+- `tests/cli/`: the `recent`, `notable` and `find` commands, autocompletion and the Ctrl+F key, driven through their public entry points
 - `tests/services/`, `tests/domain/`: cache, location and taxonomy services and domain value parsing
 - `tests/utils/`: whether and where the app log is written
 - `tests/test_prompt_dispatch.py`, `tests/test_program_arguments.py`: prompt input handling and program arguments

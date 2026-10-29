@@ -112,6 +112,7 @@ When launched, the CLI will display a menu of available commands:
 
 - `recent <scope, -region> [-back, -species]`: Fetch recent bird observations
 - `notable <scope, -region> [-back]`: Fetch notable bird observations
+- `find [text]`: Show the observations of the last `recent` or `notable` command that contain the text, without contacting eBird (see [Find](#find)). Ctrl+F starts one.
 - `settings`: Change the saved settings without leaving the prompt, as [`ebird-cli settings`](#changing-settings) does. The running session keeps its settings; the changes apply on the next launch. Ctrl+C (or Ctrl+D on an empty answer) returns to the prompt with the saved settings untouched.
 
 ### Autocompletion
@@ -202,6 +203,25 @@ When using `--year-list` and `--life-list`:
 
 - Year list targets are highlighted in **green**
 - Life list targets are highlighted in **red**
+
+### Find
+
+`find` searches the observations the last `recent` or `notable` command showed, so you can pick out a species or place in a long table without querying eBird again:
+
+```
+recent subnational -region Québec
+find bécasseau
+find marais
+```
+
+- It shows only the observations whose species name, location or region contains the text, with life and year list targets in their usual red and green.
+- Case and accents are ignored: `find becasseau` matches "Bécasseau semipalmé". Several words are found as one phrase.
+- The table keeps the columns of the last result, and its total reads like `Total: 3 of 142`.
+- Each `find` searches the whole last result, not the previous find. A `recent` or `notable` command that fails leaves it as it was; one that shows no observations replaces it.
+- `find` on its own reprints the last result.
+- Suggestions offer the species and location names of the last result.
+
+Press **Ctrl+F** (on macOS too: Cmd+F belongs to the terminal) to replace the line with `find ` and see the suggestions. In VS Code's integrated terminal, Ctrl+F opens VS Code's own terminal search unless you add `workbench.action.terminal.focusFind` to `terminal.integrated.commandsToSkipShell` with a leading `-`.
 
 ### Obtaining list files
 

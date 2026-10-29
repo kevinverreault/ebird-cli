@@ -41,3 +41,13 @@ _Avoid_: query type, endpoint
 **Observation query**:
 Observations of one Observation kind at a Location or nearby, with repeat reports collapsed: recent keeps the latest per species (or, for one species, per Location), notable the first per species at each Location.
 _Avoid_: observation service
+
+## Results
+
+**Last result**:
+The observations shown by the latest `recent` or `notable` command that succeeded in this session, even when it showed none. Finding in it never replaces it.
+_Avoid_: last search, previous results, history
+
+**Match**:
+An observation in the Last result whose species name, Location or Region contains the text being found, ignoring case and accents.
+_Avoid_: hit, search result
