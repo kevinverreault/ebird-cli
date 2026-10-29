@@ -4,6 +4,8 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-28
+
 ### Added
 
 - `find [text]` shows only the observations of the last `recent` or `notable` command whose species, location or region contains the text, ignoring case and accents, with the text highlighted. Ctrl+F starts a find.
@@ -66,7 +68,8 @@ First release on PyPI.
 - `ebird-cli --version` prints the installed version.
 - The app log is written to the user log directory.
 
-[Unreleased]: https://github.com/kevinverreault/ebird-cli/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/kevinverreault/ebird-cli/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/kevinverreault/ebird-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/kevinverreault/ebird-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/kevinverreault/ebird-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/kevinverreault/ebird-cli/releases/tag/v0.1.0
